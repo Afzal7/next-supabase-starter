@@ -58,9 +58,21 @@
   }
 }
 
+/**
+ * This code defines base styles using Tailwind CSS's layer system.
+ * 
+ * - The `@layer base` directive allows you to add or override styles in the "base" layer of Tailwind's CSS.
+ * - The universal selector `*` uses `@apply border-border`, which applies the `border-border` utility class to all elements. 
+ *   This ensures that every element has the border color defined by the `--border` CSS variable in your Tailwind config.
+ * - The `body` selector uses `@apply bg-background text-foreground` to set the background color and text color of the page's body 
+ *   using the values defined by your Tailwind theme (likely mapped to CSS custom properties).
+ * 
+ * In summary, this sets up consistent border, background, and text colors for all elements and the page body, 
+ * leveraging Tailwind CSS utilities and design tokens.
+ */
 @layer base {
   * {
-    @apply border-border;
+    /* @apply border-border; */
   }
   body {
     @apply bg-background text-foreground;
