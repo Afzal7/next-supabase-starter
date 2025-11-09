@@ -17,6 +17,7 @@ const geistSans = Nunito({
   variable: "--font-geist-sans",
   display: "swap",
   subsets: ["latin"],
+  weight: ["600", "700", "800", "900"],
 });
 
 export default function RootLayout({
