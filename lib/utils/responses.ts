@@ -1,8 +1,5 @@
 export function successResponse<T>(data: T, status: number = 200) {
-  return new Response(
-    JSON.stringify({ success: true, data }),
-    { status }
-  );
+  return new Response(JSON.stringify(data), { status });
 }
 
 export function errorResponse(
@@ -12,13 +9,10 @@ export function errorResponse(
 ) {
   return new Response(
     JSON.stringify({
-      success: false,
-      error: {
-        code,
-        message,
-        statusCode,
-        timestamp: new Date().toISOString(),
-      },
+      code,
+      message,
+      statusCode,
+      timestamp: new Date().toISOString(),
     }),
     { status: statusCode }
   );

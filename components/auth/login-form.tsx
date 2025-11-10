@@ -3,18 +3,13 @@
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 export function LoginForm({
   className,
@@ -22,15 +17,17 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = createClient();
     setIsLoading(true);
     setError(null);
+
+    const supabase = createClient();
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -38,10 +35,16 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      router.push("/dashboard");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      const message = error instanceof Error ? error.message : "An error occurred";
+      if (message.includes("Invalid login credentials")) {
+        setError("Invalid email or password");
+      } else if (message.includes("Email not confirmed")) {
+        setError("Please confirm your email before signing in");
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -49,55 +52,87 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Title */}
+            <div className="text-center">
+              <h1 className="text-xl font-semibold text-primary">Welcome Back</h1>
+            </div>
+
+            {/* Email Input */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium capitalize text-tertiary">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium capitalize text-tertiary">
+                  Password
+                </Label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm text-primary hover:underline transition-all duration-fast"
+                >
+                  Forgot password?
+                </Link>
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
+              <div className="relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10 transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary hover:text-secondary transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="text-sm text-error animate-in slide-in-from-top-2 duration-normal">
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <div className="pt-2">
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-normal ease-smooth"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
+
+            {/* Sign Up Link */}
+            <div className="text-center pt-4">
+              <span className="text-sm text-muted-foreground">Don&apos;t have an account? </span>
               <Link
                 href="/auth/sign-up"
-                className="underline underline-offset-4"
+                className="text-primary hover:underline text-sm font-medium transition-all duration-fast"
               >
                 Sign up
               </Link>

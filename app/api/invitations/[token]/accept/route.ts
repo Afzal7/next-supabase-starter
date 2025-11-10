@@ -7,16 +7,17 @@ import { logger } from '@/lib/utils/logger';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const { token } = await params;
     const user = await authenticateRequest(req);
 
-    logger.info('Accepting invitation', { userId: user.id, token: params.token });
+    logger.info('Accepting invitation', { userId: user.id, token });
 
-    await invitationService.acceptInvitation(params.token, user.id);
+    const result = await invitationService.acceptInvitation(token, user.id);
 
-    return successResponse({ message: 'Invitation accepted successfully' });
+    return successResponse({ message: 'Invitation accepted successfully', groupId: result.groupId });
   } catch (error) {
     logger.error('Failed to accept invitation', error);
     return errorHandler(error);

@@ -22,15 +22,21 @@ export type GroupConfig = {
 
 // Default configuration for generic group management
 export const groupConfig: GroupConfig = {
-  entityName: 'Organization', // Display name in UI
-  entityNamePlural: 'Organizations',
-  defaultGroupType: 'organization', // Optional: for group_type column
-  supportedGroupTypes: ['organization', 'team'], // Optional: for validation
-  defaultRoles: ['owner', 'admin', 'member'],
+  entityName: "Organization", // Display name in UI
+  entityNamePlural: "Organizations",
+  defaultGroupType: "organization", // Optional: for group_type column
+  supportedGroupTypes: ["organization"], // Optional: for validation
+  defaultRoles: ["owner", "admin", "member"],
   rolePermissions: {
-    owner: ['*'], // All permissions
-    admin: ['manage_members', 'manage_settings', 'view_content', 'invite_members', 'manage_invitations'],
-    member: ['view_content', 'edit_own_content'],
+    owner: ["*"], // All permissions
+    admin: [
+      "manage_members",
+      "manage_settings",
+      "view_content",
+      "invite_members",
+      "manage_invitations",
+    ],
+    member: ["view_content", "edit_own_content"],
   },
   limits: {
     maxGroupsPerUser: 10,
@@ -48,17 +54,26 @@ export const groupConfig: GroupConfig = {
 };
 
 // Helper function to get role permissions
-export const getRolePermissions = (role: string, config: GroupConfig = groupConfig): Record<string, boolean> => {
+export const getRolePermissions = (
+  role: string,
+  config: GroupConfig = groupConfig
+): Record<string, boolean> => {
   const permissions = config.rolePermissions[role] || [];
   return permissions.reduce((acc, perm) => ({ ...acc, [perm]: true }), {});
 };
 
 // Helper function to check if user has permission
-export const hasPermission = (userPermissions: Record<string, boolean>, permission: string): boolean => {
-  return userPermissions['*'] === true || userPermissions[permission] === true;
+export const hasPermission = (
+  userPermissions: Record<string, boolean>,
+  permission: string
+): boolean => {
+  return userPermissions["*"] === true || userPermissions[permission] === true;
 };
 
 // Helper function to validate role
-export const isValidRole = (role: string, config: GroupConfig = groupConfig): boolean => {
+export const isValidRole = (
+  role: string,
+  config: GroupConfig = groupConfig
+): boolean => {
   return config.defaultRoles.includes(role);
 };

@@ -9,14 +9,15 @@ import { logger } from '@/lib/utils/logger';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await authenticateRequest(req);
 
-    logger.info('Fetching group details', { userId: user.id, groupId: params.id });
+    logger.info('Fetching group details', { userId: user.id, groupId: id });
 
-    const group = await groupService.getGroupById(params.id, user.id);
+    const group = await groupService.getGroupById(id, user.id);
 
     return successResponse(group);
   } catch (error) {
@@ -27,15 +28,16 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await authenticateRequest(req);
     const input = await validateRequest(req, updateGroupSchema);
 
-    logger.info('Updating group', { userId: user.id, groupId: params.id });
+    logger.info('Updating group', { userId: user.id, groupId: id });
 
-    const group = await groupService.update(params.id, user.id, input);
+    const group = await groupService.update(id, user.id, input);
 
     return successResponse(group);
   } catch (error) {
@@ -46,14 +48,15 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await authenticateRequest(req);
 
-    logger.info('Deleting group', { userId: user.id, groupId: params.id });
+    logger.info('Deleting group', { userId: user.id, groupId: id });
 
-    await groupService.delete(params.id, user.id);
+    await groupService.delete(id, user.id);
 
     return successResponse({ message: 'Group deleted successfully' });
   } catch (error) {

@@ -67,8 +67,6 @@ export type CreateInvitationRequest = {
 };
 
 export type UpdateMemberRequest = {
-  groupId: string;
-  userId: string;
   role: string;
 };
 
@@ -107,6 +105,26 @@ export type InvitationWithGroup = GroupInvitation & {
     email: string;
     name?: string;
   };
+};
+
+export type InvitationDetails = {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+  group: {
+    id: string;
+    name: string;
+    description?: string;
+    group_type: string;
+    slug: string;
+  };
+};
+
+export type InvitationResponse = {
+  invitation: InvitationDetails;
 };
 
 // Pagination Types
@@ -232,7 +250,8 @@ export interface MemberService {
 export interface InvitationService {
   createInvitation(groupId: string, email: string, role: string, invitedBy: string): Promise<GroupInvitation>;
   getPendingInvitations(groupId: string, userId: string): Promise<GroupInvitation[]>;
-  acceptInvitation(token: string, userId: string): Promise<void>;
+  getInvitationByToken(token: string): Promise<GroupInvitation | null>;
+  acceptInvitation(token: string, userId: string): Promise<{ groupId: string }>;
   rejectInvitation(token: string, userId: string): Promise<void>;
   resendInvitation(invitationId: string, userId: string): Promise<void>;
   cleanupExpiredInvitations(): Promise<number>;

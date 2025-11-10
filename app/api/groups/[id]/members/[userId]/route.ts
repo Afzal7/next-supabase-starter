@@ -9,20 +9,21 @@ import { logger } from '@/lib/utils/logger';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string; userId: string } }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
+    const { id, userId } = await params;
     const user = await authenticateRequest(req);
     const input = await validateRequest(req, updateMemberRoleSchema);
 
     logger.info('Updating member role', {
       userId: user.id,
-      groupId: params.id,
-      targetUserId: params.userId,
+      groupId: id,
+      targetUserId: userId,
       newRole: input.role
     });
 
-    const member = await memberService.updateMemberRole(params.id, params.userId, input.role, user.id);
+    const member = await memberService.updateMemberRole(id, userId, input.role, user.id);
 
     return successResponse(member);
   } catch (error) {
@@ -33,18 +34,19 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; userId: string } }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
+    const { id, userId } = await params;
     const user = await authenticateRequest(req);
 
     logger.info('Removing member from group', {
       userId: user.id,
-      groupId: params.id,
-      targetUserId: params.userId
+      groupId: id,
+      targetUserId: userId
     });
 
-    await memberService.removeMember(params.id, params.userId, user.id);
+    await memberService.removeMember(id, userId, user.id);
 
     return successResponse({ message: 'Member removed successfully' });
   } catch (error) {

@@ -9,9 +9,10 @@ import { logger } from '@/lib/utils/logger';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await authenticateRequest(req);
     const url = new URL(req.url);
 
@@ -19,9 +20,9 @@ export async function GET(
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
     const search = url.searchParams.get('search') || undefined;
 
-    logger.info('Fetching group members', { userId: user.id, groupId: params.id, page, limit });
+    logger.info('Fetching group members', { userId: user.id, groupId: id, page, limit });
 
-    const result = await memberService.getGroupMembers(params.id, user.id, { page, limit, search });
+    const result = await memberService.getGroupMembers(id, user.id, { page, limit, search });
 
     return successResponse(result);
   } catch (error) {
@@ -32,15 +33,16 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await authenticateRequest(req);
     const input = await validateRequest(req, inviteMemberSchema);
 
-    logger.info('Inviting member to group', { userId: user.id, groupId: params.id, email: input.email });
+    logger.info('Inviting member to group', { userId: user.id, groupId: id, email: input.email });
 
-    const invitation = await memberService.addMember(params.id, user.id, input.email, input.role);
+    const invitation = await memberService.addMember(id, user.id, input.email, input.role);
 
     return successResponse(invitation, 201);
   } catch (error) {

@@ -12,8 +12,8 @@ export function RTKTestComponent() {
   return (
     <div>
       <h2>RTK Query Test</h2>
-      <p>Groups loaded: {groups?.data.length || 0}</p>
-      {groups?.data.map(group => (
+      <p>Groups loaded: {groups?.data?.length || 0}</p>
+      {groups?.data?.map(group => (
         <div key={group.id}>
           {group.name} - {group.slug}
         </div>

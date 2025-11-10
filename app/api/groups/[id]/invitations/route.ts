@@ -7,14 +7,15 @@ import { logger } from '@/lib/utils/logger';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await authenticateRequest(req);
 
-    logger.info('Fetching group invitations', { userId: user.id, groupId: params.id });
+    logger.info('Fetching group invitations', { userId: user.id, groupId: id });
 
-    const invitations = await invitationService.getPendingInvitations(params.id, user.id);
+    const invitations = await invitationService.getPendingInvitations(id, user.id);
 
     return successResponse(invitations);
   } catch (error) {

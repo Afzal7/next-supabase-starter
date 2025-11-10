@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useState } from "react";
+import { motion } from "motion/react";
 
 export function ForgotPasswordForm({
   className,
@@ -46,60 +47,89 @@ export function ForgotPasswordForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      {success ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Check Your Email</CardTitle>
-            <CardDescription>Password reset instructions sent</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              If you registered using your email and password, you will receive
-              a password reset email.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Reset Your Password</CardTitle>
-            <CardDescription>
-              Type in your email and we&apos;ll send you a link to reset your
-              password
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleForgotPassword}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {success ? (
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-primary">Check Your Email</CardTitle>
+              <CardDescription>Password reset instructions sent</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-secondary">
+                If you registered using your email and password, you will receive
+                a password reset email.
+              </p>
+              <div className="pt-4">
+                <Link href="/auth/login">
+                  <Button variant="outline" className="w-full">
+                    Back to Login
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-primary">Reset Password</CardTitle>
+              <CardDescription>
+                Enter your email and we&apos;ll send you a link to reset your password
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-6">
+                {/* Email Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium capitalize text-tertiary">
+                    Email
+                  </Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="m@example.com"
+                    placeholder="Enter your email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-                {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Sending..." : "Send reset email"}
-                </Button>
-              </div>
-              <div className="mt-4 text-center text-sm">
-                Already have an account?{" "}
-                <Link
-                  href="/auth/login"
-                  className="underline underline-offset-4"
-                >
-                  Login
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+
+                {/* Error Message */}
+                {error && (
+                  <div className="text-sm text-error animate-in slide-in-from-top-2 duration-normal">
+                    {error}
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    className="w-full bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-normal ease-smooth"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Sending..." : "Send Reset Email"}
+                  </Button>
+                </div>
+
+                {/* Login Link */}
+                <div className="text-center pt-4">
+                  <Link
+                    href="/auth/login"
+                    className="text-primary hover:underline text-sm font-medium transition-all duration-fast"
+                  >
+                    Back to Login
+                  </Link>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+      </motion.div>
     </div>
   );
 }

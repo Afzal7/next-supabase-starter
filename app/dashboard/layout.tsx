@@ -45,161 +45,55 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/animate-ui/components/radix/dropdown-menu";
-import {
-  AudioWaveform,
-  BadgeCheck,
-  Bell,
-  BookOpen,
-  Bot,
-  ChevronRight,
-  ChevronsUpDown,
-  Command,
-  CreditCard,
-  Folder,
-  Forward,
-  Frame,
-  GalleryVerticalEnd,
-  LogOut,
-  Map,
-  MoreHorizontal,
-  PieChart,
-  Plus,
-  Settings2,
-  Sparkles,
-  SquareTerminal,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, SquareTerminal, ChevronsUpDown, AlertCircle } from "lucide-react";
+import { Bot } from "@/components/animate-ui/icons/bot";
+import { Settings } from "@/components/animate-ui/icons/settings";
+import { BadgeCheck } from "@/components/animate-ui/icons/badge-check";
+import { LogOut } from "@/components/animate-ui/icons/log-out";
+import { Bell } from "@/components/animate-ui/icons/bell";
+import { Plus } from "@/components/animate-ui/icons/plus";
+import { Users } from "@/components/animate-ui/icons/users";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { groupConfig } from "@/config/groups";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter, usePathname } from "next/navigation";
+import { useGetGroupsQuery } from "@/lib/rtk/api";
+import { CreateGroupModal } from "@/components/groups/create-group-modal";
+import Link from "next/link";
+
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<any>;
+  isActive?: boolean;
+  items?: { title: string; url: string }[];
+};
 
 const DATA = {
-  user: {
-    name: "Skyleen",
-    email: "skyleen@example.com",
-    avatar:
-      "https://pbs.twimg.com/profile_images/1909615404789506048/MTqvRsjo_400x400.jpg",
-  },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
   navMain: [
     {
-      title: "Playground",
-      url: "#",
+      title: "Dashboard",
+      url: "/dashboard",
       icon: SquareTerminal,
       isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
     },
     {
-      title: "Models",
-      url: "#",
+      title: groupConfig.entityNamePlural,
+      url: "/dashboard",
       icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
+      title: "Profile",
+      url: "/dashboard/profile",
+      icon: BadgeCheck,
     },
     {
       title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
+      url: "/dashboard/settings",
+      icon: Settings,
     },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
+  ] as NavItem[],
 };
 
 export default function DashboardLayout({
@@ -208,15 +102,47 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const isMobile = useIsMobile();
-  const [activeTeam, setActiveTeam] = React.useState(DATA.teams[0]);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [user, setUser] = React.useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+  const [activeGroup, setActiveGroup] = React.useState<any>(null);
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
 
-  if (!activeTeam) return null;
+  const { data: groupsResponse, isLoading: groupsLoading } = useGetGroupsQuery({ page: 1, limit: 20 });
+  const groups = groupsResponse?.data || [];
+
+  React.useEffect(() => {
+    const getUser = async () => {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        setUser({
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0],
+          email: authUser.email,
+          avatar: authUser.user_metadata?.avatar_url,
+        });
+      }
+    };
+    getUser();
+  }, []);
+
+  React.useEffect(() => {
+    if (groups.length > 0 && !activeGroup) {
+      setActiveGroup(groups[0]);
+    }
+  }, [groups, activeGroup]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/login');
+  };
 
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          {/* Team Switcher */}
+          {/* Group Switcher */}
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -225,15 +151,15 @@ export default function DashboardLayout({
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                      <activeTeam.logo className="size-4" />
-                    </div>
+                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                       <Bot className="size-4" animateOnHover />
+                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
-                        {activeTeam.name}
+                        {activeGroup?.name || (groups.length === 0 ? 'No ' + groupConfig.entityNamePlural.toLowerCase() : groupConfig.entityName)}
                       </span>
                       <span className="truncate text-xs">
-                        {activeTeam.plan}
+                        {activeGroup?.group_type || (groups.length === 0 ? 'Create one below' : 'Management')}
                       </span>
                     </div>
                     <ChevronsUpDown className="ml-auto" />
@@ -245,128 +171,177 @@ export default function DashboardLayout({
                   side={isMobile ? "bottom" : "right"}
                   sideOffset={4}
                 >
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Teams
-                  </DropdownMenuLabel>
-                  {DATA.teams.map((team, index) => (
-                    <DropdownMenuItem
-                      key={team.name}
-                      onClick={() => setActiveTeam(team)}
-                      className="gap-2 p-2"
-                    >
-                      <div className="flex size-6 items-center justify-center rounded-sm border">
-                        <team.logo className="size-4 shrink-0" />
-                      </div>
-                      {team.name}
-                      <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  ))}
+                   <DropdownMenuLabel className="text-xs text-muted-foreground">
+                     {groupConfig.entityNamePlural}
+                   </DropdownMenuLabel>
+                   {groupsLoading ? (
+                     <div className="p-2">
+                       <div className="flex items-center gap-2 p-2">
+                         <div className="size-6 animate-pulse rounded-sm bg-muted" />
+                         <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                       </div>
+                       <div className="flex items-center gap-2 p-2">
+                         <div className="size-6 animate-pulse rounded-sm bg-muted" />
+                         <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                       </div>
+                     </div>
+                   ) : groups.length > 0 ? (
+                     groups.map((group, index) => (
+                        <DropdownMenuItem
+                          key={group.id}
+                          onClick={() => {
+                            setActiveGroup(group);
+                            router.push(`/dashboard/groups/${group.id}`);
+                          }}
+                          className="gap-2 p-2"
+                        >
+                     <div className="flex size-6 items-center justify-center rounded-sm border">
+                         <Bot className="size-4 shrink-0" animateOnHover />
+                       </div>
+                         {group.name}
+                         <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                       </DropdownMenuItem>
+                     ))
+                   ) : (
+                     <div className="p-2 text-center text-sm text-muted-foreground">
+                       No {groupConfig.entityNamePlural.toLowerCase()} found
+                     </div>
+                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2 p-2">
-                    <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                      <Plus className="size-4" />
-                    </div>
+                  <DropdownMenuItem
+                    className="gap-2 p-2"
+                    onClick={() => setShowCreateModal(true)}
+                  >
+                     <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                       <Plus className="size-4" animateOnHover />
+                     </div>
                     <div className="font-medium text-muted-foreground">
-                      Add team
+                      Create {groupConfig.entityName}
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
-          {/* Team Switcher */}
+          {/* Group Switcher */}
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Nav Main */}
+            {/* Workspace Section - Only show when on group pages */}
+          {pathname.startsWith('/dashboard/groups/') && activeGroup && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Overview"
+                    isActive={pathname === `/dashboard/groups/${activeGroup.id}`}
+                  >
+                    <Link href={`/dashboard/groups/${activeGroup.id}`}>
+                      <Settings animateOnHover />
+                      <span>Overview</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Members"
+                    isActive={pathname === `/dashboard/groups/${activeGroup.id}/members`}
+                  >
+                    <Link href={`/dashboard/groups/${activeGroup.id}/members`}>
+                      <Users animateOnHover />
+                      <span>Members</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Invitations"
+                    isActive={pathname === `/dashboard/groups/${activeGroup.id}/invitations`}
+                  >
+                    <Link href={`/dashboard/groups/${activeGroup.id}/invitations`}>
+                      <AlertCircle />
+                      <span>Invitations</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Settings"
+                    isActive={pathname === `/dashboard/groups/${activeGroup.id}/settings`}
+                  >
+                    <Link href={`/dashboard/groups/${activeGroup.id}/settings`}>
+                      <Settings animateOnHover />
+                      <span>Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+          )}
+
+          {/* Platform Section */}
           <SidebarGroup>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
             <SidebarMenu>
-              {DATA.navMain.map((item) => (
-                <Collapsible
-                  key={item.title}
-                  asChild
-                  defaultOpen={item.isActive}
-                  className="group/collapsible"
-                >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title}>
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items?.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton asChild>
-                              <a href={subItem.url}>
-                                <span>{subItem.title}</span>
-                              </a>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-          {/* Nav Main */}
-
-          {/* Nav Project */}
-          <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-            <SidebarGroupLabel>Projects</SidebarGroupLabel>
-            <SidebarMenu>
-              {DATA.projects.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.name}</span>
-                    </a>
-                  </SidebarMenuButton>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <SidebarMenuAction showOnHover>
-                        <MoreHorizontal />
-                        <span className="sr-only">More</span>
-                      </SidebarMenuAction>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="w-48 rounded-lg"
-                      side={isMobile ? "bottom" : "right"}
-                      align={isMobile ? "end" : "start"}
+              {DATA.navMain
+                .filter(item => item.title !== groupConfig.entityNamePlural) // Remove groups from here since we handle it separately
+                .map((item) => (
+                  item.items ? (
+                    <Collapsible
+                      key={item.title}
+                      asChild
+                      defaultOpen={item.isActive}
+                      className="group/collapsible"
                     >
-                      <DropdownMenuItem>
-                        <Folder className="text-muted-foreground" />
-                        <span>View Project</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Forward className="text-muted-foreground" />
-                        <span>Share Project</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Trash2 className="text-muted-foreground" />
-                        <span>Delete Project</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-              ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton className="text-sidebar-foreground/70">
-                  <MoreHorizontal className="text-sidebar-foreground/70" />
-                  <span>More</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            tooltip={item.title}
+                            isActive={pathname === item.url}
+                          >
+                          {item.icon && <item.icon animateOnHover />}
+                            <span>{item.title}</span>
+                            <ChevronRight className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.items.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.title}>
+                                <SidebarMenuSubButton asChild>
+                                  <a href={subItem.url}>
+                                    <span>{subItem.title}</span>
+                                  </a>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  ) : (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.title}
+                        isActive={pathname === item.url}
+                      >
+                        <Link href={item.url}>
+                          {item.icon && <item.icon animateOnHover />}
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                ))}
             </SidebarMenu>
           </SidebarGroup>
-          {/* Nav Project */}
+
         </SidebarContent>
         <SidebarFooter>
           {/* Nav User */}
@@ -380,17 +355,19 @@ export default function DashboardLayout({
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage
-                        src={DATA.user.avatar}
-                        alt={DATA.user.name}
+                        src={user?.avatar}
+                        alt={user?.name}
                       />
-                      <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                      <AvatarFallback className="rounded-lg">
+                        {user?.name?.charAt(0) || user?.email?.charAt(0) || "U"}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
-                        {DATA.user.name}
+                        {user?.name || "User"}
                       </span>
                       <span className="truncate text-xs">
-                        {DATA.user.email}
+                        {user?.email}
                       </span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4" />
@@ -406,50 +383,39 @@ export default function DashboardLayout({
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="h-8 w-8 rounded-lg">
                         <AvatarImage
-                          src={DATA.user.avatar}
-                          alt={DATA.user.name}
+                          src={user?.avatar}
+                          alt={user?.name}
                         />
                         <AvatarFallback className="rounded-lg">
-                          CN
+                          {user?.name?.charAt(0) || user?.email?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-semibold">
-                          {DATA.user.name}
+                          {user?.name || "User"}
                         </span>
                         <span className="truncate text-xs">
-                          {DATA.user.email}
+                          {user?.email}
                         </span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <Sparkles />
-                      Upgrade to Pro
-                    </DropdownMenuItem>
+                     <DropdownMenuItem>
+                       <BadgeCheck animateOnHover />
+                       Account
+                     </DropdownMenuItem>
+                     <DropdownMenuItem>
+                       <Bell animateOnHover />
+                       Notifications
+                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <BadgeCheck />
-                      Account
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <CreditCard />
-                      Billing
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Bell />
-                      Notifications
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut />
-                    Log out
-                  </DropdownMenuItem>
+                   <DropdownMenuItem onClick={handleLogout}>
+                     <LogOut animateOnHover />
+                     Log out
+                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
@@ -468,20 +434,54 @@ export default function DashboardLayout({
                 orientation="vertical"
                 className="hidden h-4! sm:block"
               />
-              <Breadcrumb className="hidden sm:block">
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="#">Home</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="#">Dashboard</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Free</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
+               <Breadcrumb className="hidden sm:block">
+                 <BreadcrumbList>
+                   <BreadcrumbItem>
+                     <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                   </BreadcrumbItem>
+                   {pathname.startsWith('/dashboard/groups/') && (
+                     <>
+                       <BreadcrumbSeparator />
+                       <BreadcrumbItem>
+                         <BreadcrumbLink href={`/dashboard/groups/${activeGroup?.id || pathname.split('/')[3]}`}>
+                           {activeGroup?.name || 'Group'}
+                         </BreadcrumbLink>
+                       </BreadcrumbItem>
+                       {pathname.includes('/members') && (
+                         <>
+                           <BreadcrumbSeparator />
+                           <BreadcrumbItem>
+                             <BreadcrumbPage>Members</BreadcrumbPage>
+                           </BreadcrumbItem>
+                         </>
+                       )}
+                       {pathname.includes('/invitations') && (
+                         <>
+                           <BreadcrumbSeparator />
+                           <BreadcrumbItem>
+                             <BreadcrumbPage>Invitations</BreadcrumbPage>
+                           </BreadcrumbItem>
+                         </>
+                       )}
+                       {pathname.includes('/settings') && (
+                         <>
+                           <BreadcrumbSeparator />
+                           <BreadcrumbItem>
+                             <BreadcrumbPage>Settings</BreadcrumbPage>
+                           </BreadcrumbItem>
+                         </>
+                       )}
+                     </>
+                   )}
+                   {!pathname.startsWith('/dashboard/groups/') && (
+                     <>
+                       <BreadcrumbSeparator />
+                       <BreadcrumbItem>
+                         <BreadcrumbPage>{activeGroup?.name || (groups.length === 0 ? 'No ' + groupConfig.entityNamePlural.toLowerCase() : groupConfig.entityNamePlural)}</BreadcrumbPage>
+                       </BreadcrumbItem>
+                     </>
+                   )}
+                 </BreadcrumbList>
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-1.5">
@@ -505,6 +505,11 @@ export default function DashboardLayout({
           <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
         </div> */}
       </SidebarInset>
+
+      <CreateGroupModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+      />
     </SidebarProvider>
   );
 }

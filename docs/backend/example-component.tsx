@@ -97,7 +97,7 @@ export function GroupsExample() {
 
       {/* Groups List */}
       <div>
-        {groups?.data.map(group => (
+        {groups?.data?.map(group => (
           <div key={group.id} style={{ border: '1px solid #ccc', padding: '10px', margin: '10px' }}>
             <h3>{group.name}</h3>
             <p>{group.description}</p>

@@ -1,6 +1,6 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from './store';
-import { createClient } from '@/lib/supabase/client';
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { RootState } from "./store";
+import { createClient } from "@/lib/supabase/client";
 import type {
   Group,
   GroupWithMembers,
@@ -12,18 +12,22 @@ import type {
   UpdateGroupRequest,
   CreateInvitationRequest,
   UpdateMemberRequest,
-} from '@/types';
+  InvitationDetails,
+  InvitationResponse,
+} from "@/types";
 
 // Base query with token injection
 const baseQuery = fetchBaseQuery({
-  baseUrl: '/api',
+  baseUrl: "/api",
   prepareHeaders: async (headers) => {
     // Get auth token from Supabase
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (session?.access_token) {
-      headers.set('authorization', `Bearer ${session.access_token}`);
+      headers.set("authorization", `Bearer ${session.access_token}`);
     }
 
     return headers;
@@ -31,11 +35,7 @@ const baseQuery = fetchBaseQuery({
 });
 
 // Wrapper for handling 401 errors (token refresh)
-const baseQueryWithReauth = async (
-  args: any,
-  api: any,
-  extraOptions: any
-) => {
+const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error?.status === 401) {
@@ -54,9 +54,9 @@ const baseQueryWithReauth = async (
 
 // RTK Query API slice
 export const groupApi = createApi({
-  reducerPath: 'groupApi',
+  reducerPath: "groupApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Group', 'Member', 'Invitation'],
+  tagTypes: ["Group", "Member", "Invitation"],
   endpoints: (builder) => ({
     // Groups endpoints
     getGroups: builder.query<
@@ -65,44 +65,47 @@ export const groupApi = createApi({
     >({
       query: (params) => {
         const searchParams = new URLSearchParams();
-        if (params.page) searchParams.set('page', params.page.toString());
-        if (params.limit) searchParams.set('limit', params.limit.toString());
-        if (params.search) searchParams.set('search', params.search);
-        if (params.type) searchParams.set('type', params.type);
+        if (params.page) searchParams.set("page", params.page.toString());
+        if (params.limit) searchParams.set("limit", params.limit.toString());
+        if (params.search) searchParams.set("search", params.search);
+        if (params.type) searchParams.set("type", params.type);
         return `/groups?${searchParams.toString()}`;
       },
-      providesTags: ['Group'],
+      providesTags: ["Group"],
     }),
 
     createGroup: builder.mutation<Group, CreateGroupRequest>({
       query: (body) => ({
-        url: '/groups',
-        method: 'POST',
+        url: "/groups",
+        method: "POST",
         body,
       }),
-      invalidatesTags: ['Group'],
+      invalidatesTags: ["Group"],
     }),
 
     getGroup: builder.query<GroupWithMembers, string>({
       query: (id) => `/groups/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Group', id }],
+      providesTags: (result, error, id) => [{ type: "Group", id }],
     }),
 
-    updateGroup: builder.mutation<Group, { id: string; body: UpdateGroupRequest }>({
+    updateGroup: builder.mutation<
+      Group,
+      { id: string; body: UpdateGroupRequest }
+    >({
       query: ({ id, body }) => ({
         url: `/groups/${id}`,
-        method: 'PUT',
+        method: "PUT",
         body,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Group', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: "Group", id }],
     }),
 
     deleteGroup: builder.mutation<void, string>({
       query: (id) => ({
         url: `/groups/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Group'],
+      invalidatesTags: ["Group"],
     }),
 
     // Members endpoints
@@ -112,54 +115,86 @@ export const groupApi = createApi({
     >({
       query: ({ groupId, ...params }) => {
         const searchParams = new URLSearchParams();
-        if (params.page) searchParams.set('page', params.page.toString());
-        if (params.limit) searchParams.set('limit', params.limit.toString());
-        if (params.search) searchParams.set('search', params.search);
+        if (params.page) searchParams.set("page", params.page.toString());
+        if (params.limit) searchParams.set("limit", params.limit.toString());
+        if (params.search) searchParams.set("search", params.search);
         return `/groups/${groupId}/members?${searchParams.toString()}`;
       },
-      providesTags: ['Member'],
+      providesTags: ["Member"],
     }),
 
-    inviteMember: builder.mutation<GroupInvitation, { groupId: string; body: CreateInvitationRequest }>({
+    inviteMember: builder.mutation<
+      GroupInvitation,
+      { groupId: string; body: CreateInvitationRequest }
+    >({
       query: ({ groupId, body }) => ({
         url: `/groups/${groupId}/members`,
-        method: 'POST',
+        method: "POST",
         body,
       }),
-      invalidatesTags: ['Member', 'Invitation'],
+      invalidatesTags: ["Member", "Invitation"],
     }),
 
-    updateMember: builder.mutation<GroupMember, { groupId: string; userId: string; body: UpdateMemberRequest }>({
+    updateMember: builder.mutation<
+      GroupMember,
+      { groupId: string; userId: string; body: UpdateMemberRequest }
+    >({
       query: ({ groupId, userId, body }) => ({
         url: `/groups/${groupId}/members/${userId}`,
-        method: 'PUT',
+        method: "PUT",
         body,
       }),
-      invalidatesTags: ['Member'],
+      invalidatesTags: ["Member"],
     }),
 
     removeMember: builder.mutation<void, { groupId: string; userId: string }>({
       query: ({ groupId, userId }) => ({
         url: `/groups/${groupId}/members/${userId}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Member'],
+      invalidatesTags: ["Member"],
     }),
 
     // Invitations endpoints
     getInvitations: builder.query<GroupInvitation[], string>({
       query: (groupId) => `/groups/${groupId}/invitations`,
-      providesTags: ['Invitation'],
+      providesTags: ["Invitation"],
     }),
 
-    acceptInvitation: builder.mutation<void, string>({
-      query: (token) => ({ url: `/invitations/${token}/accept`, method: 'POST' }),
-      invalidatesTags: ['Group', 'Member', 'Invitation'],
+    acceptInvitation: builder.mutation<{ groupId: string }, string>({
+      query: (token) => ({
+        url: `/invitations/${token}/accept`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Group", "Member", "Invitation"],
     }),
 
     rejectInvitation: builder.mutation<void, string>({
-      query: (token) => ({ url: `/invitations/${token}/reject`, method: 'POST' }),
-      invalidatesTags: ['Invitation'],
+      query: (token) => ({
+        url: `/invitations/${token}/reject`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Invitation"],
+    }),
+
+    resendInvitation: builder.mutation<void, string>({
+      query: (invitationId) => ({
+        url: `/invitations/${invitationId}/resend`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Invitation"],
+    }),
+
+    cancelInvitation: builder.mutation<void, string>({
+      query: (invitationId) => ({
+        url: `/invitations/${invitationId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Invitation"],
+    }),
+
+    getInvitationByToken: builder.query<InvitationResponse, string>({
+      query: (token) => `/invitations/${token}`,
     }),
   }),
 });
@@ -178,4 +213,7 @@ export const {
   useGetInvitationsQuery,
   useAcceptInvitationMutation,
   useRejectInvitationMutation,
+  useResendInvitationMutation,
+  useCancelInvitationMutation,
+  useGetInvitationByTokenQuery,
 } = groupApi;
