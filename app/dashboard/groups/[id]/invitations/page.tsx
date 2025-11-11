@@ -81,7 +81,7 @@ export default function GroupInvitationsPage() {
                         <DropdownMenuItem
                           onClick={() => {
                             if (confirm('Cancel this invitation?')) {
-                              cancelInvitation(invitation.id);
+                              cancelInvitation({ groupId, invitationId: invitation.id });
                             }
                           }}
                           className="text-destructive"

@@ -102,8 +102,8 @@ export const emailConfig: EmailConfig = {
 
 The setup includes:
 - `ReduxProvider` wrapping your entire app
-- Automatic token injection for API requests
-- Token refresh handling for expired sessions
+- **Cookie-based authentication** (middleware handles auth)
+- **Automatic session management** via cookies
 - Intelligent caching and invalidation
 
 If you need to modify the setup, it's already imported and configured in your layout.
@@ -289,6 +289,33 @@ function InviteMemberForm({ groupId }) {
 }
 ```
 
+#### Cancelling Invitations
+
+```tsx
+import { useCancelInvitationMutation } from '@/lib/rtk/api';
+
+function CancelInvitationButton({ groupId, invitationId }) {
+  const [cancelInvitation, { isLoading }] = useCancelInvitationMutation();
+
+  const handleCancel = async () => {
+    if (confirm('Cancel this invitation?')) {
+      try {
+        await cancelInvitation({ groupId, invitationId }).unwrap();
+        console.log('Invitation cancelled!');
+      } catch (error) {
+        console.error('Failed:', error);
+      }
+    }
+  };
+
+  return (
+    <button onClick={handleCancel} disabled={isLoading}>
+      {isLoading ? 'Cancelling...' : 'Cancel Invitation'}
+    </button>
+  );
+}
+```
+
 #### Accepting/Rejecting Invitations
 
 ```tsx
@@ -331,6 +358,15 @@ function InvitationActions({ token }) {
 
 ## Security & Authentication
 
+### Cookie-Based Authentication
+
+The backend uses **cookie-based authentication** following Supabase SSR best practices:
+
+- **HTTP-only cookies** store session tokens securely
+- **Automatic session management** via root `middleware.ts`
+- **Server-side session validation** on every API request
+- **No manual token passing** required in API calls
+
 ### Avoiding auth.users Queries
 
 The backend avoids direct queries to `auth.users` for performance and security reasons:
@@ -368,6 +404,7 @@ All tables use Row Level Security with policies based on:
 ### Invitations
 
 - `GET /api/groups/[id]/invitations` - List pending invitations
+- `DELETE /api/groups/[id]/invitations/[invitationId]` - Cancel invitation
 - `POST /api/invitations/[token]/accept` - Accept invitation
 - `POST /api/invitations/[token]/reject` - Reject invitation
 
@@ -413,7 +450,24 @@ if (error) {
 
 ### Session Management
 
-The backend uses Supabase sessions. RTK Query automatically injects auth tokens into requests. Sessions are managed by the pre-configured `middleware.ts`.
+The backend uses **cookie-based sessions** managed by the root `middleware.ts`:
+
+- **Automatic session refresh** on page loads
+- **Secure HTTP-only cookies** for token storage
+- **Server-side session validation** on every request
+- **No manual token management** required
+
+### API Authentication
+
+API routes automatically authenticate users via cookies:
+
+```typescript
+// API routes use cookie-based auth
+export async function GET(req: NextRequest) {
+  const user = await authenticateRequest(req); // Reads from cookies
+  // ... business logic
+}
+```
 
 ### Permission Checks
 
@@ -467,7 +521,9 @@ app/api/
 │       │   └── [userId]/
 │       │       └── route.ts # PUT/DELETE member
 │       └── invitations/
-│           └── route.ts   # GET invitations
+│           ├── route.ts   # GET invitations
+│           └── [invitationId]/
+│               └── route.ts   # DELETE cancel invitation
 └── invitations/
     └── [token]/
         ├── accept/

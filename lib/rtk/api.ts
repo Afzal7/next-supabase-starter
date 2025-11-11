@@ -1,6 +1,4 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import type { RootState } from "./store";
-import { createClient } from "@/lib/supabase/client";
 import type {
   Group,
   GroupWithMembers,
@@ -12,44 +10,17 @@ import type {
   UpdateGroupRequest,
   CreateInvitationRequest,
   UpdateMemberRequest,
-  InvitationDetails,
   InvitationResponse,
 } from "@/types";
 
-// Base query with token injection
+// Base query using cookies (middleware handles authentication)
 const baseQuery = fetchBaseQuery({
   baseUrl: "/api",
-  prepareHeaders: async (headers) => {
-    // Get auth token from Supabase
-    const supabase = await createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session?.access_token) {
-      headers.set("authorization", `Bearer ${session.access_token}`);
-    }
-
-    return headers;
-  },
 });
 
-// Wrapper for handling 401 errors (token refresh)
+// Base query with cookie-based authentication
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
-  let result = await baseQuery(args, api, extraOptions);
-
-  if (result.error?.status === 401) {
-    // Token expired, refresh and retry
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.refreshSession();
-
-    if (!error && data.session) {
-      // Retry original request
-      result = await baseQuery(args, api, extraOptions);
-    }
-  }
-
-  return result;
+  return await baseQuery(args, api, extraOptions);
 };
 
 // RTK Query API slice
@@ -185,9 +156,9 @@ export const groupApi = createApi({
       invalidatesTags: ["Invitation"],
     }),
 
-    cancelInvitation: builder.mutation<void, string>({
-      query: (invitationId) => ({
-        url: `/invitations/${invitationId}`,
+    cancelInvitation: builder.mutation<void, { groupId: string; invitationId: string }>({
+      query: ({ groupId, invitationId }) => ({
+        url: `/groups/${groupId}/invitations/${invitationId}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Invitation"],

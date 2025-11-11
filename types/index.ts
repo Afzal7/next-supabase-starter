@@ -253,6 +253,7 @@ export interface InvitationService {
   getInvitationByToken(token: string): Promise<GroupInvitation | null>;
   acceptInvitation(token: string, userId: string): Promise<{ groupId: string }>;
   rejectInvitation(token: string, userId: string): Promise<void>;
+  cancelInvitation(invitationId: string, userId: string): Promise<void>;
   resendInvitation(invitationId: string, userId: string): Promise<void>;
   cleanupExpiredInvitations(): Promise<number>;
 }

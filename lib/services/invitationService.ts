@@ -79,6 +79,12 @@ export class GenericInvitationService implements InvitationService {
     // Generate secure token
     const token = this.generateSecureToken();
 
+    // Log plain token for testing (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔑 INVITATION TOKEN for ${email}: ${token}`);
+      console.log(`📧 Test URL: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invitations/${token}/accept`);
+    }
+
     // Create invitation with inviter name stored
     const { data: invitation, error } = await supabase
       .from("group_invitations")
@@ -288,6 +294,57 @@ export class GenericInvitationService implements InvitationService {
       "invitation_rejected",
       {
         invitationId: invitation.id,
+      }
+    );
+  }
+
+  async cancelInvitation(invitationId: string, userId: string): Promise<void> {
+    const supabase = await createClient();
+
+    // Find invitation
+    const { data: invitation, error: findError } = await supabase
+      .from("group_invitations")
+      .select("*, groups(*)")
+      .eq("id", invitationId)
+      .eq("status", "pending")
+      .single();
+
+    if (findError || !invitation) {
+      throw createNotFoundError("Invitation");
+    }
+
+    // Verify user has permission (group owner or admin)
+    const { data: membership } = await supabase
+      .from("group_members")
+      .select("role")
+      .eq("group_id", invitation.group_id)
+      .eq("user_id", userId)
+      .single();
+
+    if (!membership || !["owner", "admin"].includes(membership.role)) {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Insufficient permissions to cancel invitations",
+        403
+      );
+    }
+
+    // Update invitation status to cancelled
+    const { error } = await supabase
+      .from("group_invitations")
+      .update({ status: "cancelled" })
+      .eq("id", invitation.id);
+
+    if (error) throw handleDatabaseError(error, "cancelling invitation");
+
+    // Log the cancellation
+    await this.logAuditEvent(
+      invitation.group_id,
+      userId,
+      "invitation_cancelled",
+      {
+        invitationId: invitation.id,
+        cancelledEmail: invitation.email,
       }
     );
   }
