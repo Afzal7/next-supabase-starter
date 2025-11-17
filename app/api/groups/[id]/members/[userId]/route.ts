@@ -1,56 +1,61 @@
-import { NextRequest } from 'next/server';
-import { memberService } from '@/lib/services/memberService';
-import { updateMemberRoleSchema } from '@/lib/schemas/groupSchemas';
-import { authenticateRequest } from '@/lib/middleware/auth.middleware';
-import { errorHandler } from '@/lib/middleware/errorHandler.middleware';
-import { validateRequest } from '@/lib/utils/validators';
-import { successResponse } from '@/lib/utils/responses';
-import { logger } from '@/lib/utils/logger';
+import type { NextRequest } from "next/server";
+import { authenticateRequest } from "@/lib/middleware/auth.middleware";
+import { errorHandler } from "@/lib/middleware/errorHandler.middleware";
+import { updateMemberRoleSchema } from "@/lib/schemas/groupSchemas";
+import { memberService } from "@/lib/services/memberService";
+import { logger } from "@/lib/utils/logger";
+import { successResponse } from "@/lib/utils/responses";
+import { validateRequest } from "@/lib/utils/validators";
 
 export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string; userId: string }> }
+	req: NextRequest,
+	{ params }: { params: Promise<{ id: string; userId: string }> },
 ) {
-  try {
-    const { id, userId } = await params;
-    const user = await authenticateRequest(req);
-    const input = await validateRequest(req, updateMemberRoleSchema);
+	try {
+		const { id, userId } = await params;
+		const user = await authenticateRequest(req);
+		const input = await validateRequest(req, updateMemberRoleSchema);
 
-    logger.info('Updating member role', {
-      userId: user.id,
-      groupId: id,
-      targetUserId: userId,
-      newRole: input.role
-    });
+		logger.info("Updating member role", {
+			userId: user.id,
+			groupId: id,
+			targetUserId: userId,
+			newRole: input.role,
+		});
 
-    const member = await memberService.updateMemberRole(id, userId, input.role, user.id);
+		const member = await memberService.updateMemberRole(
+			id,
+			userId,
+			input.role,
+			user.id,
+		);
 
-    return successResponse(member);
-  } catch (error) {
-    logger.error('Failed to update member role', error);
-    return errorHandler(error);
-  }
+		return successResponse(member);
+	} catch (error) {
+		logger.error("Failed to update member role", error);
+		return errorHandler(error);
+	}
 }
 
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string; userId: string }> }
+	req: NextRequest,
+	{ params }: { params: Promise<{ id: string; userId: string }> },
 ) {
-  try {
-    const { id, userId } = await params;
-    const user = await authenticateRequest(req);
+	try {
+		const { id, userId } = await params;
+		const user = await authenticateRequest(req);
 
-    logger.info('Removing member from group', {
-      userId: user.id,
-      groupId: id,
-      targetUserId: userId
-    });
+		logger.info("Removing member from group", {
+			userId: user.id,
+			groupId: id,
+			targetUserId: userId,
+		});
 
-    await memberService.removeMember(id, userId, user.id);
+		await memberService.removeMember(id, userId, user.id);
 
-    return successResponse({ message: 'Member removed successfully' });
-  } catch (error) {
-    logger.error('Failed to remove member', error);
-    return errorHandler(error);
-  }
+		return successResponse({ message: "Member removed successfully" });
+	} catch (error) {
+		logger.error("Failed to remove member", error);
+		return errorHandler(error);
+	}
 }

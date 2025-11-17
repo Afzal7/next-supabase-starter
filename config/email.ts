@@ -1,36 +1,36 @@
-export type EmailProvider = 'resend' | 'sendgrid' | 'aws-ses';
+export type EmailProvider = "resend" | "sendgrid" | "aws-ses";
 
 export type EmailTemplate = {
-  subject: string;
-  html: string;
-  text: string;
+	subject: string;
+	html: string;
+	text: string;
 };
 
 export type EmailConfig = {
-  provider: EmailProvider;
-  templates: {
-    invitation: EmailTemplate;
-    welcome: EmailTemplate;
-    invitationReminder?: EmailTemplate;
-    memberRemoved?: EmailTemplate;
-  };
-  from: {
-    email: string;
-    name: string;
-  };
-  replyTo?: {
-    email: string;
-    name?: string;
-  };
+	provider: EmailProvider;
+	templates: {
+		invitation: EmailTemplate;
+		welcome: EmailTemplate;
+		invitationReminder?: EmailTemplate;
+		memberRemoved?: EmailTemplate;
+	};
+	from: {
+		email: string;
+		name: string;
+	};
+	replyTo?: {
+		email: string;
+		name?: string;
+	};
 };
 
 // Default email configuration
 export const emailConfig: EmailConfig = {
-  provider: 'resend',
-  templates: {
-    invitation: {
-      subject: 'You\'ve been invited to join {{groupName}}',
-      html: `
+	provider: "resend",
+	templates: {
+		invitation: {
+			subject: "You've been invited to join {{groupName}}",
+			html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -65,7 +65,7 @@ export const emailConfig: EmailConfig = {
         </body>
         </html>
       `,
-      text: `
+			text: `
 You've been invited to join {{groupName}}!
 
 Hello,
@@ -81,10 +81,10 @@ If you didn't expect this invitation, you can safely ignore this email.
 ---
 This invitation was sent to {{email}}
       `,
-    },
-    welcome: {
-      subject: 'Welcome to {{groupName}}!',
-      html: `
+		},
+		welcome: {
+			subject: "Welcome to {{groupName}}!",
+			html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -123,7 +123,7 @@ This invitation was sent to {{email}}
         </body>
         </html>
       `,
-      text: `
+			text: `
 Welcome to {{groupName}}!
 
 Hello {{userName}},
@@ -141,45 +141,45 @@ Happy collaborating!
 ---
 You're receiving this email because you joined {{groupName}}
       `,
-    },
-  },
-  from: {
-    email: 'noreply@yourapp.com',
-    name: 'Your App',
-  },
-  replyTo: {
-    email: 'support@yourapp.com',
-  },
+		},
+	},
+	from: {
+		email: "noreply@yourapp.com",
+		name: "Your App",
+	},
+	replyTo: {
+		email: "support@yourapp.com",
+	},
 };
 
 // Template variable replacer
 export const replaceTemplateVars = (
-  template: string,
-  variables: Record<string, string | number>
+	template: string,
+	variables: Record<string, string | number>,
 ): string => {
-  let result = template;
-  for (const [key, value] of Object.entries(variables)) {
-    result = result.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
-  }
-  return result;
+	let result = template;
+	for (const [key, value] of Object.entries(variables)) {
+		result = result.replace(new RegExp(`{{${key}}}`, "g"), String(value));
+	}
+	return result;
 };
 
 // Email service interface
 export interface EmailService {
-  sendInvitation(invitationData: {
-    email: string;
-    groupName: string;
-    inviterName: string;
-    role: string;
-    acceptUrl: string;
-    expiryDays: number;
-  }): Promise<void>;
+	sendInvitation(invitationData: {
+		email: string;
+		groupName: string;
+		inviterName: string;
+		role: string;
+		acceptUrl: string;
+		expiryDays: number;
+	}): Promise<void>;
 
-  sendWelcome(memberData: {
-    email: string;
-    userName: string;
-    groupName: string;
-    role: string;
-    groupUrl: string;
-  }): Promise<void>;
+	sendWelcome(memberData: {
+		email: string;
+		userName: string;
+		groupName: string;
+		role: string;
+		groupUrl: string;
+	}): Promise<void>;
 }

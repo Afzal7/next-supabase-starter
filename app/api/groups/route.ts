@@ -1,59 +1,59 @@
-import { NextRequest } from "next/server";
-import { groupService } from "@/lib/services/groupService";
-import { createGroupSchema } from "@/lib/schemas/groupSchemas";
+import type { NextRequest } from "next/server";
 import { authenticateRequest } from "@/lib/middleware/auth.middleware";
 import { errorHandler } from "@/lib/middleware/errorHandler.middleware";
-import { validateRequest } from "@/lib/utils/validators";
-import { successResponse } from "@/lib/utils/responses";
+import { createGroupSchema } from "@/lib/schemas/groupSchemas";
+import { groupService } from "@/lib/services/groupService";
 import { logger } from "@/lib/utils/logger";
+import { successResponse } from "@/lib/utils/responses";
+import { validateRequest } from "@/lib/utils/validators";
 
 export async function GET(req: NextRequest) {
-  try {
-    const user = await authenticateRequest(req);
-    const url = new URL(req.url);
+	try {
+		const user = await authenticateRequest(req);
+		const url = new URL(req.url);
 
-    const page = parseInt(url.searchParams.get("page") || "1");
-    const limit = Math.min(
-      parseInt(url.searchParams.get("limit") || "20"),
-      100
-    );
-    const search = url.searchParams.get("search") || undefined;
-    const type = url.searchParams.get("type") || undefined;
+		const page = parseInt(url.searchParams.get("page") || "1", 10);
+		const limit = Math.min(
+			parseInt(url.searchParams.get("limit") || "20", 10),
+			100,
+		);
+		const search = url.searchParams.get("search") || undefined;
+		const type = url.searchParams.get("type") || undefined;
 
-    logger.info("Fetching user groups", {
-      userId: user.id,
-      page,
-      limit,
-      search,
-      type,
-    });
+		logger.info("Fetching user groups", {
+			userId: user.id,
+			page,
+			limit,
+			search,
+			type,
+		});
 
-    const result = await groupService.getUserGroups(user.id, {
-      page,
-      limit,
-      search,
-      type,
-    });
+		const result = await groupService.getUserGroups(user.id, {
+			page,
+			limit,
+			search,
+			type,
+		});
 
-    return successResponse(result);
-  } catch (error) {
-    logger.error("Failed to fetch groups", error);
-    return errorHandler(error);
-  }
+		return successResponse(result);
+	} catch (error) {
+		logger.error("Failed to fetch groups", error);
+		return errorHandler(error);
+	}
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const user = await authenticateRequest(req);
-    const input = await validateRequest(req, createGroupSchema);
+	try {
+		const user = await authenticateRequest(req);
+		const input = await validateRequest(req, createGroupSchema);
 
-    logger.info("Creating group", { userId: user.id, name: input.name });
+		logger.info("Creating group", { userId: user.id, name: input.name });
 
-    const group = await groupService.create(user.id, input);
+		const group = await groupService.create(user.id, input);
 
-    return successResponse(group, 201);
-  } catch (error) {
-    logger.error("Failed to create group", error);
-    return errorHandler(error);
-  }
+		return successResponse(group, 201);
+	} catch (error) {
+		logger.error("Failed to create group", error);
+		return errorHandler(error);
+	}
 }
