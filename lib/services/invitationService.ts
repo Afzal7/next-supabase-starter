@@ -216,12 +216,21 @@ export class GenericInvitationService implements InvitationService {
 			);
 		}
 
+		// Get current user details for member record
+		const userEmail = user.user.email || "";
+		const userName =
+			user.user.user_metadata?.name ||
+			user.user.user_metadata?.full_name ||
+			user.user.email?.split("@")[0];
+
 		// Start transaction-like operation
 		const { error: memberError } = await supabase.from("group_members").insert({
 			group_id: invitation.group_id,
 			user_id: userId,
 			role: invitation.role,
 			permissions: this.getRolePermissions(invitation.role),
+			email: userEmail,
+			name: userName,
 		});
 
 		if (memberError) throw handleDatabaseError(memberError, "adding member");

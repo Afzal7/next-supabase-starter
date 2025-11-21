@@ -56,12 +56,22 @@ export class GenericGroupService implements GroupService {
 
 		if (error) throw handleDatabaseError(error, "group creation");
 
+		// Get current user details for member record
+		const { data: userData } = await supabase.auth.getUser();
+		const userEmail = userData.user?.email || "";
+		const userName =
+			userData.user?.user_metadata?.name ||
+			userData.user?.user_metadata?.full_name ||
+			userData.user?.email?.split("@")[0];
+
 		// Add owner as member
 		const { error: memberError } = await supabase.from("group_members").insert({
 			group_id: group.id,
 			user_id: userId,
 			role: "owner",
 			permissions: this.getRolePermissions("owner"),
+			email: userEmail,
+			name: userName,
 		});
 
 		if (memberError) {
@@ -172,7 +182,7 @@ export class GenericGroupService implements GroupService {
 		// Fetch members
 		const { data: members, error: membersError } = await supabase
 			.from("group_members")
-			.select("id, user_id, role, permissions, joined_at")
+			.select("id, user_id, role, permissions, joined_at, email, name")
 			.eq("group_id", id);
 
 		if (membersError)
@@ -187,16 +197,15 @@ export class GenericGroupService implements GroupService {
 		if (invitationsError)
 			throw handleDatabaseError(invitationsError, "fetching group invitations");
 
-		// For now, return basic data without full user details
-		// User details would require additional queries or different permissions
+		// User details are already stored in group_members table
 		const transformedGroup: GroupWithMembers = {
 			...group,
 			members: (members || []).map((member) => ({
 				...member,
 				user: {
 					id: member.user_id,
-					email: "", // Would need separate query to get user emails
-					name: undefined,
+					email: member.email || "",
+					name: member.name,
 				},
 			})),
 			invitations: invitations || [],
