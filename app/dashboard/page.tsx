@@ -110,7 +110,7 @@ export default function Dashboard() {
 							<Card className="shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-200 ease-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2">
 								<CardHeader>
 									<CardTitle className="text-lg text-primary">
-										{group.name}
+										<span className="capitalize">{group.name}</span>
 									</CardTitle>
 									<p className="text-sm text-secondary">
 										{group.description || "No description"}

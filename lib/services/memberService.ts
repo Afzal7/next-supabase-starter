@@ -46,7 +46,7 @@ export class GenericMemberService implements MemberService {
 			const order = options.sortOrder || "desc";
 			query = query.order(options.sortBy, { ascending: order === "asc" });
 		} else {
-			query = query.order("joined_at", { ascending: false });
+			query = query.order("joined_at", { ascending: true });
 		}
 
 		const { data: members, error, count } = await query;

@@ -77,13 +77,22 @@ export const groupApi = createApi({
 		// Members endpoints
 		getMembers: builder.query<
 			PaginatedResponse<MemberWithUser>,
-			{ groupId: string; page?: number; limit?: number; search?: string }
+			{
+				groupId: string;
+				page?: number;
+				limit?: number;
+				search?: string;
+				sortBy?: string;
+				sortOrder?: "asc" | "desc";
+			}
 		>({
 			query: ({ groupId, ...params }) => {
 				const searchParams = new URLSearchParams();
 				if (params.page) searchParams.set("page", params.page.toString());
 				if (params.limit) searchParams.set("limit", params.limit.toString());
 				if (params.search) searchParams.set("search", params.search);
+				if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+				if (params.sortOrder) searchParams.set("sortOrder", params.sortOrder);
 				return `/groups/${groupId}/members?${searchParams.toString()}`;
 			},
 			providesTags: ["Member"],

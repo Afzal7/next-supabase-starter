@@ -3,12 +3,10 @@
 import { AlertCircle, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Users } from "@/components/animate-ui/icons/users";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetGroupQuery, useGetMembersQuery } from "@/lib/rtk/api";
+import { useGetGroupQuery } from "@/lib/rtk/api";
 import { InviteMemberModal } from "./_components/InviteMemberModal";
 
 interface GroupLayoutProps {
@@ -24,11 +22,8 @@ export default function GroupLayout({ children }: GroupLayoutProps) {
 		isLoading: groupLoading,
 		error: groupError,
 	} = useGetGroupQuery(groupId);
-	const { data: membersResponse } = useGetMembersQuery({ groupId });
-
 	const isLoading = groupLoading;
 	const error = groupError;
-	const membersCount = membersResponse?.data?.length || 0;
 
 	if (isLoading) {
 		return (
@@ -81,10 +76,6 @@ export default function GroupLayout({ children }: GroupLayoutProps) {
 							{group.created_at
 								? new Date(group.created_at as string).toLocaleDateString()
 								: "Unknown"}
-						</span>
-						<span className="flex items-center gap-1">
-							<Users className="h-4 w-4" animateOnHover />
-							{membersCount} members
 						</span>
 					</div>
 				</div>

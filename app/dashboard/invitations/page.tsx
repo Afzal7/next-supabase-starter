@@ -94,7 +94,7 @@ export default function UserInvitationsPage() {
 												<Users className="h-5 w-5 text-primary" />
 											</div>
 											<div>
-												<CardTitle className="text-lg text-primary">
+												<CardTitle className="text-lg text-primary capitalize">
 													{invitation.group?.name || "Unknown Group"}
 												</CardTitle>
 												<p className="text-sm text-secondary">

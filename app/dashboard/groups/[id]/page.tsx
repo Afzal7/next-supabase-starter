@@ -2,16 +2,11 @@
 
 import { useParams } from "next/navigation";
 import { Settings } from "@/components/animate-ui/icons/settings";
-import { Users } from "@/components/animate-ui/icons/users";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { groupConfig } from "@/config/groups";
-import {
-	useGetGroupQuery,
-	useGetInvitationsQuery,
-	useGetMembersQuery,
-} from "@/lib/rtk/api";
+import { useGetGroupQuery } from "@/lib/rtk/api";
 
 export default function GroupOverviewPage() {
 	const params = useParams();
@@ -23,24 +18,11 @@ export default function GroupOverviewPage() {
 		error: groupError,
 		refetch: refetchGroup,
 	} = useGetGroupQuery(groupId);
-	const {
-		data: membersResponse,
-		isLoading: membersLoading,
-		refetch: refetchMembers,
-	} = useGetMembersQuery({ groupId });
-	const {
-		data: invitations,
-		isLoading: invitationsLoading,
-		refetch: refetchInvitations,
-	} = useGetInvitationsQuery(groupId);
-
-	const isLoading = groupLoading || membersLoading || invitationsLoading;
+	const isLoading = groupLoading;
 	const error = groupError;
 
 	const refetch = () => {
 		refetchGroup();
-		refetchMembers();
-		refetchInvitations();
 	};
 
 	if (isLoading) {
@@ -60,9 +42,6 @@ export default function GroupOverviewPage() {
 		return <ErrorState message="Group not found." />;
 	}
 
-	const members = membersResponse?.data || [];
-	const invitationsCount = invitations?.length || 0;
-
 	return (
 		<div className="space-y-6">
 			<div className="grid gap-4 md:grid-cols-2 lg:gap-6">
@@ -77,7 +56,7 @@ export default function GroupOverviewPage() {
 					<CardContent className="space-y-4">
 						<div>
 							<dt className="text-sm font-medium text-tertiary">Name</dt>
-							<dd className="text-primary mt-1">{group.name}</dd>
+							<dd className="text-primary mt-1 capitalize">{group.name}</dd>
 						</div>
 						<div>
 							<dt className="text-sm font-medium text-tertiary">Slug</dt>
@@ -104,25 +83,23 @@ export default function GroupOverviewPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
-							<Users className="h-5 w-5" animateOnHover />
-							Quick Stats
+							<Settings className="h-5 w-5" animateOnHover />
+							Group Stats
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
-						<div className="flex items-center justify-between">
-							<span className="text-secondary">Total Members</span>
-							<span className="font-semibold">{members.length}</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<span className="text-secondary">Active Invitations</span>
-							<span className="font-semibold">{invitationsCount}</span>
-						</div>
 						<div className="flex items-center justify-between">
 							<span className="text-secondary">Created</span>
 							<span className="font-semibold text-sm">
 								{group.created_at
 									? new Date(group.created_at).toLocaleDateString()
 									: "Unknown"}
+							</span>
+						</div>
+						<div className="flex items-center justify-between">
+							<span className="text-secondary">Type</span>
+							<span className="font-semibold capitalize">
+								{group.group_type}
 							</span>
 						</div>
 					</CardContent>

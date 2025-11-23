@@ -22,18 +22,25 @@ export async function GET(
 			100,
 		);
 		const search = url.searchParams.get("search") || undefined;
+		const sortBy = url.searchParams.get("sortBy") || undefined;
+		const sortOrder =
+			(url.searchParams.get("sortOrder") as "asc" | "desc") || undefined;
 
 		logger.info("Fetching group members", {
 			userId: user.id,
 			groupId: id,
 			page,
 			limit,
+			sortBy,
+			sortOrder,
 		});
 
 		const result = await memberService.getGroupMembers(id, user.id, {
 			page,
 			limit,
 			search,
+			sortBy,
+			sortOrder,
 		});
 
 		return successResponse(result);
