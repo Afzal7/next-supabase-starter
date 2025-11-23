@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	AlertTriangle,
-	Loader2,
-	Settings as SettingsIcon,
-	Trash2,
-	UserX,
-} from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Trash2, UserX } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -96,7 +90,7 @@ export default function GroupSettingsPage() {
 	}
 
 	if (!group) {
-		return <ErrorState message="Group not found." />;
+		return <ErrorState message={`${groupConfig.entityName} not found.`} />;
 	}
 
 	if (!isOwner) {
@@ -114,7 +108,7 @@ export default function GroupSettingsPage() {
 						variant="outline"
 						onClick={() => router.push(`/dashboard/groups/${groupId}`)}
 					>
-						Back to Group
+						Back to {groupConfig.entityName}
 					</Button>
 				</div>
 			</div>
@@ -125,7 +119,7 @@ export default function GroupSettingsPage() {
 		e.preventDefault();
 
 		if (!name.trim()) {
-			toast.error("Group name is required");
+			toast.error(`${groupConfig.entityName} name is required`);
 			return;
 		}
 
@@ -138,7 +132,7 @@ export default function GroupSettingsPage() {
 				},
 			}).unwrap();
 
-			toast.success("Group settings updated successfully");
+			toast.success(`${groupConfig.entityName} settings updated successfully`);
 		} catch (_error) {
 			toast.error("Failed to update group settings");
 		}
@@ -149,11 +143,11 @@ export default function GroupSettingsPage() {
 			description:
 				"This action cannot be undone. All members will be removed and all data will be permanently deleted.",
 			action: {
-				label: "Delete Group",
+				label: `Delete ${groupConfig.entityName}`,
 				onClick: async () => {
 					try {
 						await deleteGroup(groupId).unwrap();
-						toast.success("Group deleted successfully");
+						toast.success(`${groupConfig.entityName} deleted successfully`);
 						router.push("/dashboard");
 					} catch (_error) {
 						toast.error("Failed to delete group");
@@ -176,7 +170,7 @@ export default function GroupSettingsPage() {
 				<CardContent>
 					<form onSubmit={handleUpdateSettings} className="space-y-6">
 						<div className="space-y-2">
-							<Label htmlFor="name">Group Name</Label>
+							<Label htmlFor="name">{groupConfig.entityName} Name</Label>
 							<Input
 								id="name"
 								value={name}
@@ -209,15 +203,15 @@ export default function GroupSettingsPage() {
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
-						<SettingsIcon className="h-5 w-5" />
-						Group Information
+						<FileText className="h-5 w-5" />
+						{groupConfig.entityName} Information
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div className="grid gap-4 md:grid-cols-2">
 						<div>
 							<dt className="text-sm font-medium text-muted-foreground">
-								Group ID
+								{groupConfig.entityName} ID
 							</dt>
 							<dd className="text-sm font-mono mt-1">{group.id}</dd>
 						</div>
