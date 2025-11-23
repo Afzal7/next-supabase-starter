@@ -105,8 +105,8 @@ export default function Dashboard() {
 			{groups.length === 0 ? (
 				<Card className="shadow-sm">
 					<CardContent className="p-12 text-center space-y-4">
-						<div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-							<Users className="h-8 w-8 text-tertiary" animateOnHover />
+						<div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto">
+							<Users className="h-8 w-8 text-primary" animateOnHover />
 						</div>
 						<div>
 							<h3 className="text-lg font-semibold text-primary mb-2">
@@ -142,7 +142,12 @@ export default function Dashboard() {
 									<div className="flex items-center justify-between text-sm text-tertiary">
 										<span className="capitalize">{group.group_type}</span>
 										<span className="text-xs">
-											Created {new Date(group.created_at).toLocaleDateString()}
+											Created{" "}
+											{group.created_at
+												? new Date(
+														group.created_at as string,
+													).toLocaleDateString()
+												: "Unknown"}
 										</span>
 									</div>
 								</CardContent>

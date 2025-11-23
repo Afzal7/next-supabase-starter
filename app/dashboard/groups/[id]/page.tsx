@@ -6,17 +6,35 @@ import { Users } from "@/components/animate-ui/icons/users";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { groupConfig } from "@/config/groups";
-import { useGetGroupQuery } from "@/lib/rtk/api";
+import {
+	useGetGroupQuery,
+	useGetMembersQuery,
+	useGetInvitationsQuery,
+} from "@/lib/rtk/api";
 
 export default function GroupOverviewPage() {
 	const params = useParams();
 	const groupId = params.id as string;
 
-	const { data: group, isLoading, error } = useGetGroupQuery(groupId);
+	const {
+		data: group,
+		isLoading: groupLoading,
+		error: groupError,
+	} = useGetGroupQuery(groupId);
+	const { data: membersResponse, isLoading: membersLoading } =
+		useGetMembersQuery({ groupId });
+	const { data: invitations, isLoading: invitationsLoading } =
+		useGetInvitationsQuery(groupId);
+
+	const isLoading = groupLoading || membersLoading || invitationsLoading;
+	const error = groupError;
 
 	if (isLoading || error || !group) {
 		return null; // Layout handles loading and error states
 	}
+
+	const members = membersResponse?.data || [];
+	const invitationsCount = invitations?.length || 0;
 
 	return (
 		<div className="space-y-6">
@@ -66,20 +84,18 @@ export default function GroupOverviewPage() {
 					<CardContent className="space-y-4">
 						<div className="flex items-center justify-between">
 							<span className="text-secondary">Total Members</span>
-							<span className="font-semibold">
-								{group.members?.length || 0}
-							</span>
+							<span className="font-semibold">{members.length}</span>
 						</div>
 						<div className="flex items-center justify-between">
 							<span className="text-secondary">Active Invitations</span>
-							<span className="font-semibold">
-								{group.invitations?.length || 0}
-							</span>
+							<span className="font-semibold">{invitationsCount}</span>
 						</div>
 						<div className="flex items-center justify-between">
 							<span className="text-secondary">Created</span>
 							<span className="font-semibold text-sm">
-								{new Date(group.created_at).toLocaleDateString()}
+								{group.created_at
+									? new Date(group.created_at).toLocaleDateString()
+									: "Unknown"}
 							</span>
 						</div>
 					</CardContent>

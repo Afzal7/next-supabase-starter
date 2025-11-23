@@ -24,7 +24,6 @@ CREATE TABLE groups (
 CREATE INDEX idx_groups_owner_id ON groups(owner_id);
 CREATE INDEX idx_groups_slug ON groups(slug);
 CREATE INDEX idx_groups_type ON groups(group_type);
-CREATE INDEX idx_groups_is_deleted ON groups(is_deleted);
 -- Additional indexes for RLS performance
 CREATE INDEX idx_groups_id_owner_id ON groups(id, owner_id);
 -- Create group_members table
@@ -40,7 +39,6 @@ CREATE TABLE group_members (
 -- Create indexes for group_members (including RLS policy indexes)
 CREATE INDEX idx_group_members_group_id ON group_members(group_id);
 CREATE INDEX idx_group_members_user_id ON group_members(user_id);
-CREATE INDEX idx_group_members_role ON group_members(role);
 -- Additional indexes for RLS performance
 CREATE INDEX idx_group_members_group_id_user_id ON group_members(group_id, user_id);
 -- Create group_invitations table

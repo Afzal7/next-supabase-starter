@@ -5,8 +5,8 @@ import type {
 	Group,
 	GroupInvitation,
 	GroupMember,
-	GroupWithMembers,
 	InvitationResponse,
+	InvitationSummary,
 	MemberWithUser,
 	PaginatedResponse,
 	UpdateGroupRequest,
@@ -49,7 +49,7 @@ export const groupApi = createApi({
 			invalidatesTags: ["Group"],
 		}),
 
-		getGroup: builder.query<GroupWithMembers, string>({
+		getGroup: builder.query<Group, string>({
 			query: (id) => `/groups/${id}`,
 			providesTags: (_result, _error, id) => [{ type: "Group", id }],
 		}),
@@ -89,6 +89,16 @@ export const groupApi = createApi({
 			providesTags: ["Member"],
 		}),
 
+		getMember: builder.query<
+			MemberWithUser,
+			{ groupId: string; userId: string }
+		>({
+			query: ({ groupId, userId }) => `/groups/${groupId}/members/${userId}`,
+			providesTags: (_result, _error, { groupId, userId }) => [
+				{ type: "Member", id: `${groupId}-${userId}` },
+			],
+		}),
+
 		inviteMember: builder.mutation<
 			GroupInvitation,
 			{ groupId: string; body: CreateInvitationRequest }
@@ -98,7 +108,11 @@ export const groupApi = createApi({
 				method: "POST",
 				body,
 			}),
-			invalidatesTags: ["Member", "Invitation"],
+			invalidatesTags: (_result, _error, { groupId }) => [
+				"Member",
+				"Invitation",
+				{ type: "Group", id: groupId },
+			],
 		}),
 
 		updateMember: builder.mutation<
@@ -110,7 +124,10 @@ export const groupApi = createApi({
 				method: "PUT",
 				body,
 			}),
-			invalidatesTags: ["Member"],
+			invalidatesTags: (_result, _error, { groupId }) => [
+				"Member",
+				{ type: "Group", id: groupId },
+			],
 		}),
 
 		removeMember: builder.mutation<void, { groupId: string; userId: string }>({
@@ -118,7 +135,10 @@ export const groupApi = createApi({
 				url: `/groups/${groupId}/members/${userId}`,
 				method: "DELETE",
 			}),
-			invalidatesTags: ["Member"],
+			invalidatesTags: (_result, _error, { groupId }) => [
+				"Member",
+				{ type: "Group", id: groupId },
+			],
 		}),
 
 		// Invitations endpoints
@@ -159,11 +179,22 @@ export const groupApi = createApi({
 				url: `/groups/${groupId}/invitations/${invitationId}`,
 				method: "DELETE",
 			}),
-			invalidatesTags: ["Invitation"],
+			invalidatesTags: (_result, _error, { groupId }) => [
+				"Invitation",
+				{ type: "Group", id: groupId },
+			],
 		}),
 
 		getInvitationByToken: builder.query<InvitationResponse, string>({
 			query: (token) => `/invitations/${token}`,
+		}),
+
+		getUserInvitations: builder.query<
+			{ invitations: InvitationSummary[] },
+			void
+		>({
+			query: () => "/invitations",
+			providesTags: ["Invitation"],
 		}),
 	}),
 });
@@ -176,6 +207,7 @@ export const {
 	useUpdateGroupMutation,
 	useDeleteGroupMutation,
 	useGetMembersQuery,
+	useGetMemberQuery,
 	useInviteMemberMutation,
 	useUpdateMemberMutation,
 	useRemoveMemberMutation,
@@ -185,4 +217,5 @@ export const {
 	useResendInvitationMutation,
 	useCancelInvitationMutation,
 	useGetInvitationByTokenQuery,
+	useGetUserInvitationsQuery,
 } = groupApi;

@@ -90,6 +90,11 @@ const DATA = {
 			icon: Bot,
 		},
 		{
+			title: "Invitations",
+			url: "/dashboard/invitations",
+			icon: Bell,
+		},
+		{
 			title: "Profile",
 			url: "/dashboard/profile",
 			icon: BadgeCheck,
@@ -502,20 +507,47 @@ export default function DashboardLayout({
 											)}
 										</>
 									)}
-									{!pathname.startsWith("/dashboard/groups/") && (
+									{pathname === "/dashboard/invitations" && (
 										<>
 											<BreadcrumbSeparator />
 											<BreadcrumbItem>
-												<BreadcrumbPage>
-													{activeGroup?.name ||
-														(groups.length === 0
-															? "No " +
-																groupConfig.entityNamePlural.toLowerCase()
-															: groupConfig.entityNamePlural)}
-												</BreadcrumbPage>
+												<BreadcrumbPage>Invitations</BreadcrumbPage>
 											</BreadcrumbItem>
 										</>
 									)}
+									{pathname === "/dashboard/profile" && (
+										<>
+											<BreadcrumbSeparator />
+											<BreadcrumbItem>
+												<BreadcrumbPage>Profile</BreadcrumbPage>
+											</BreadcrumbItem>
+										</>
+									)}
+									{pathname === "/dashboard/settings" && (
+										<>
+											<BreadcrumbSeparator />
+											<BreadcrumbItem>
+												<BreadcrumbPage>Settings</BreadcrumbPage>
+											</BreadcrumbItem>
+										</>
+									)}
+									{!pathname.startsWith("/dashboard/groups/") &&
+										!pathname.includes("/invitations") &&
+										!pathname.includes("/profile") &&
+										!pathname.includes("/settings") && (
+											<>
+												<BreadcrumbSeparator />
+												<BreadcrumbItem>
+													<BreadcrumbPage>
+														{activeGroup?.name ||
+															(groups.length === 0
+																? "No " +
+																	groupConfig.entityNamePlural.toLowerCase()
+																: groupConfig.entityNamePlural)}
+													</BreadcrumbPage>
+												</BreadcrumbItem>
+											</>
+										)}
 								</BreadcrumbList>
 							</Breadcrumb>
 						</div>

@@ -142,76 +142,39 @@ export class GenericGroupService implements GroupService {
 		};
 	}
 
-	async getGroupById(id: string, userId: string): Promise<GroupWithMembers> {
+	async getGroupById(id: string, userId: string): Promise<Group> {
 		const supabase = await createClient();
 
-		// Check if user has access to this group
-		const { data: membership } = await supabase
-			.from("group_members")
-			.select("role")
-			.eq("group_id", id)
-			.eq("user_id", userId)
-			.single();
-
-		if (!membership) {
-			// Check if user is owner
-			const { data: group } = await supabase
+		// Since RLS is disabled, we can optimize by fetching group and checking access in parallel
+		const [groupResult, membershipResult] = await Promise.all([
+			supabase
 				.from("groups")
-				.select("owner_id")
+				.select("*")
 				.eq("id", id)
 				.eq("is_deleted", false)
-				.single();
+				.single(),
+			supabase
+				.from("group_members")
+				.select("id")
+				.eq("group_id", id)
+				.eq("user_id", userId)
+				.single(),
+		]);
 
-			if (!group || group.owner_id !== userId) {
-				throw createNotFoundError(this.config.entityName);
-			}
-		}
-
-		// Fetch group
-		const { data: group, error: groupError } = await supabase
-			.from("groups")
-			.select("*")
-			.eq("id", id)
-			.eq("is_deleted", false)
-			.single();
+		const { data: group, error: groupError } = groupResult;
+		const { data: membership } = membershipResult;
 
 		if (groupError || !group) {
 			throw createNotFoundError(this.config.entityName);
 		}
 
-		// Fetch members
-		const { data: members, error: membersError } = await supabase
-			.from("group_members")
-			.select("id, user_id, role, permissions, joined_at, email, name")
-			.eq("group_id", id);
+		// Check if user has access (member or owner)
+		const hasAccess = membership || group.owner_id === userId;
+		if (!hasAccess) {
+			throw createNotFoundError(this.config.entityName);
+		}
 
-		if (membersError)
-			throw handleDatabaseError(membersError, "fetching group members");
-
-		// Fetch invitations
-		const { data: invitations, error: invitationsError } = await supabase
-			.from("group_invitations")
-			.select("id, email, role, status, expires_at, created_at, invited_by")
-			.eq("group_id", id);
-
-		if (invitationsError)
-			throw handleDatabaseError(invitationsError, "fetching group invitations");
-
-		// User details are already stored in group_members table
-		const transformedGroup: GroupWithMembers = {
-			...group,
-			members: (members || []).map((member) => ({
-				...member,
-				user: {
-					id: member.user_id,
-					email: member.email || "",
-					name: member.name,
-				},
-			})),
-			invitations: invitations || [],
-		};
-
-		return transformedGroup;
+		return group;
 	}
 
 	async update(

@@ -24,6 +24,8 @@ export async function GET(
 			throw createNotFoundError("Invitation");
 		}
 
+		console.log("Invitation details:", invitation);
+
 		return successResponse({
 			invitation: {
 				id: invitation.id,

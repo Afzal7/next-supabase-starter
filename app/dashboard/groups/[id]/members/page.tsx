@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { groupConfig } from "@/config/groups";
 import {
-	useGetGroupQuery,
+	useGetMembersQuery,
 	useRemoveMemberMutation,
 	useUpdateMemberMutation,
 } from "@/lib/rtk/api";
@@ -28,11 +28,17 @@ export default function GroupMembersPage() {
 	const params = useParams();
 	const groupId = params.id as string;
 
-	const { data: group } = useGetGroupQuery(groupId);
+	const {
+		data: membersResponse,
+		isLoading,
+		error,
+	} = useGetMembersQuery({ groupId });
 	const [updateMember] = useUpdateMemberMutation();
 	const [removeMember] = useRemoveMemberMutation();
 
-	if (!group) return null;
+	const members = membersResponse?.data || [];
+
+	if (isLoading || error) return null;
 
 	return (
 		<div className="space-y-6">
@@ -43,9 +49,9 @@ export default function GroupMembersPage() {
 				<InviteMemberModal groupId={groupId} />
 			</div>
 
-			{group.members && group.members.length > 0 ? (
+			{members.length > 0 ? (
 				<div className="grid gap-4">
-					{group.members.map((member) => (
+					{members.map((member) => (
 						<Card key={member.id} className="hover:shadow-md transition-shadow">
 							<CardContent className="p-4">
 								<div className="flex items-center justify-between">

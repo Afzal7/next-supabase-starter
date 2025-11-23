@@ -1,16 +1,26 @@
 import { groupConfig } from "@/config/groups";
 import { createNotFoundError, handleDatabaseError } from "@/lib/errors";
+import { createAdminClient, getUserDetails } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
 	AppError,
 	ErrorCode,
 	type GroupInvitation,
 	type InvitationService,
+	type InvitationWithGroups,
 } from "@/types";
+import type { Json } from "@/types/database.types";
 import { emailService } from "./emailService";
 
 export class GenericInvitationService implements InvitationService {
 	constructor(private config = groupConfig) {}
+
+	private getJsonProperty(obj: Json, key: string): unknown {
+		if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+			return (obj as Record<string, unknown>)[key];
+		}
+		return undefined;
+	}
 
 	async createInvitation(
 		groupId: string,
@@ -66,14 +76,10 @@ export class GenericInvitationService implements InvitationService {
 			);
 		}
 
-		// Get current user details from JWT for inviter name
-		const {
-			data: { user: currentUser },
-		} = await supabase.auth.getUser();
+		// Get inviter details from auth.users using admin client
+		const inviterDetails = await getUserDetails(invitedBy);
 		const inviterName =
-			currentUser?.user_metadata?.name ||
-			currentUser?.email?.split("@")[0] ||
-			"Someone";
+			inviterDetails?.name?.trim() || inviterDetails?.email || "Someone";
 
 		// Generate secure token
 		const token = this.generateSecureToken();
@@ -84,7 +90,7 @@ export class GenericInvitationService implements InvitationService {
 			console.log(
 				`📧 Test URL: ${
 					process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-				}/invitations/${token}/accept`,
+				}/invitations/${token}`,
 			);
 		}
 
@@ -216,21 +222,12 @@ export class GenericInvitationService implements InvitationService {
 			);
 		}
 
-		// Get current user details for member record
-		const userEmail = user.user.email || "";
-		const userName =
-			user.user.user_metadata?.name ||
-			user.user.user_metadata?.full_name ||
-			user.user.email?.split("@")[0];
-
 		// Start transaction-like operation
 		const { error: memberError } = await supabase.from("group_members").insert({
 			group_id: invitation.group_id,
 			user_id: userId,
 			role: invitation.role,
 			permissions: this.getRolePermissions(invitation.role),
-			email: userEmail,
-			name: userName,
 		});
 
 		if (memberError) throw handleDatabaseError(memberError, "adding member");
@@ -418,7 +415,13 @@ export class GenericInvitationService implements InvitationService {
 		const inviterName =
 			currentUser?.user_metadata?.name ||
 			currentUser?.email?.split("@")[0] ||
-			invitation.details?.inviter_name ||
+			(invitation.details &&
+			typeof invitation.details === "object" &&
+			!Array.isArray(invitation.details) &&
+			"inviter_name" in invitation.details
+				? ((invitation.details as Record<string, unknown>)
+						.inviter_name as string)
+				: undefined) ||
 			"Someone";
 
 		// Send invitation email
@@ -436,12 +439,14 @@ export class GenericInvitationService implements InvitationService {
 		});
 	}
 
-	async getInvitationByToken(token: string): Promise<GroupInvitation | null> {
+	async getInvitationByToken(
+		token: string,
+	): Promise<InvitationWithGroups | null> {
 		const supabase = await createClient();
 
 		const { data: invitation, error } = await supabase
 			.from("group_invitations")
-			.select("*, groups(*)")
+			.select("*")
 			.eq("token", this.hashToken(token))
 			.single();
 
@@ -449,7 +454,139 @@ export class GenericInvitationService implements InvitationService {
 			return null;
 		}
 
-		return invitation;
+		// Fetch group details using admin client to bypass RLS
+		const adminClient = createAdminClient();
+		const { data: group, error: groupError } = await adminClient
+			.from("groups")
+			.select("id, name, description, group_type, slug")
+			.eq("id", invitation.group_id)
+			.single();
+
+		if (groupError) {
+			console.error("Failed to fetch group details:", groupError);
+			return null;
+		}
+
+		// Return invitation with group details
+		return {
+			...invitation,
+			groups: group,
+		};
+	}
+
+	async acceptInvitationById(
+		invitationId: string,
+		userId: string,
+	): Promise<{ groupId: string }> {
+		const supabase = await createClient();
+
+		// Get user email for verification
+		const { data: user } = await supabase.auth.getUser();
+		if (!user.user?.email) {
+			throw new AppError(ErrorCode.UNAUTHORIZED, "User email not found", 401);
+		}
+
+		// Find invitation by ID and verify ownership
+		const { data: invitation, error: findError } = await supabase
+			.from("group_invitations")
+			.select("*")
+			.eq("id", invitationId)
+			.eq("email", user.user.email) // Verify ownership
+			.eq("status", "pending")
+			.single();
+
+		if (findError || !invitation) {
+			throw createNotFoundError("Invitation");
+		}
+
+		// Check if invitation has expired
+		if (new Date(invitation.expires_at) < new Date()) {
+			throw new AppError(
+				ErrorCode.VALIDATION_ERROR,
+				"Invitation has expired",
+				400,
+			);
+		}
+
+		// Use existing accept logic with the token
+		return await this.acceptInvitation(invitation.token, userId);
+	}
+
+	async rejectInvitationById(
+		invitationId: string,
+		userId: string,
+	): Promise<void> {
+		const supabase = await createClient();
+
+		// Get user email for verification
+		const { data: user } = await supabase.auth.getUser();
+		if (!user.user?.email) {
+			throw new AppError(ErrorCode.UNAUTHORIZED, "User email not found", 401);
+		}
+
+		// Find invitation by ID and verify ownership
+		const { data: invitation, error: findError } = await supabase
+			.from("group_invitations")
+			.select("*")
+			.eq("id", invitationId)
+			.eq("email", user.user.email) // Verify ownership
+			.eq("status", "pending")
+			.single();
+
+		if (findError || !invitation) {
+			throw createNotFoundError("Invitation");
+		}
+
+		// Use existing reject logic with the token
+		return await this.rejectInvitation(invitation.token, userId);
+	}
+
+	async getInvitationsByEmail(email: string): Promise<InvitationWithGroups[]> {
+		const supabase = await createClient();
+
+		// First get the invitations
+		const { data: invitations, error } = await supabase
+			.from("group_invitations")
+			.select("*")
+			.eq("email", email)
+			.eq("status", "pending")
+			.order("created_at", { ascending: false });
+
+		if (error) {
+			throw handleDatabaseError(error, "fetching invitations by email");
+		}
+
+		if (!invitations || invitations.length === 0) {
+			return [];
+		}
+
+		// Fetch group details for each invitation using admin client
+		const adminClient = createAdminClient();
+
+		const invitationsWithGroups = await Promise.all(
+			invitations.map(async (invitation) => {
+				const { data: group, error: groupError } = await adminClient
+					.from("groups")
+					.select("id, name, description, group_type, slug")
+					.eq("id", invitation.group_id)
+					.single();
+
+				if (groupError) {
+					console.error(
+						`Failed to fetch group details for invitation ${invitation.id}:`,
+						groupError,
+					);
+					return null;
+				}
+
+				return {
+					...invitation,
+					groups: group,
+				};
+			}),
+		);
+
+		return invitationsWithGroups.filter(Boolean) as InvitationWithGroups[];
 	}
 
 	async cleanupExpiredInvitations(): Promise<number> {
@@ -508,7 +645,9 @@ export class GenericInvitationService implements InvitationService {
 
 		// Use the inviter name passed as parameter (stored in invitation.details)
 		const displayName =
-			inviterName || (invitation.details?.inviter_name as string) || "Someone";
+			inviterName ||
+			(this.getJsonProperty(invitation.details, "inviter_name") as string) ||
+			"Someone";
 
 		const acceptUrl = `${
 			process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -575,10 +714,10 @@ export class GenericInvitationService implements InvitationService {
 		const supabase = await createClient();
 
 		await supabase.from("group_audit_log").insert({
-			group_id: groupId,
-			user_id: userId,
 			action,
-			details,
+			user_id: userId,
+			group_id: groupId,
+			details: details as Json,
 		});
 	}
 }

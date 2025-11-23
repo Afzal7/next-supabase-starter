@@ -15,7 +15,15 @@ export async function POST(
 
 		logger.info("Accepting invitation", { userId: user.id, token });
 
-		const result = await invitationService.acceptInvitation(token, user.id);
+		// Check if token is actually an invitation ID (UUID format)
+		const isInvitationId =
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+				token,
+			);
+
+		const result = isInvitationId
+			? await invitationService.acceptInvitationById(token, user.id)
+			: await invitationService.acceptInvitation(token, user.id);
 
 		return successResponse({
 			message: "Invitation accepted successfully",

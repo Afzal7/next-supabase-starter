@@ -194,29 +194,34 @@ export function CreateGroupModal({
 							</p>
 						</div>
 
-						{/* Group Type */}
-						<div className="space-y-2">
-							<Label
-								htmlFor="type"
-								className="text-sm font-medium capitalize text-tertiary"
-							>
-								Type
-							</Label>
-							<Select value={groupType} onValueChange={setGroupType}>
-								<SelectTrigger className="transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20">
-									<SelectValue placeholder="Select group type" />
-								</SelectTrigger>
-								<SelectContent>
-									{(
-										groupConfig.supportedGroupTypes || ["organization", "team"]
-									).map((type) => (
-										<SelectItem key={type} value={type}>
-											{type.charAt(0).toUpperCase() + type.slice(1)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+						{/* Group Type - Only show if multiple types are supported */}
+						{(groupConfig.supportedGroupTypes || []).length > 1 && (
+							<div className="space-y-2">
+								<Label
+									htmlFor="type"
+									className="text-sm font-medium capitalize text-tertiary"
+								>
+									Type
+								</Label>
+								<Select value={groupType} onValueChange={setGroupType}>
+									<SelectTrigger className="transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20">
+										<SelectValue placeholder="Select group type" />
+									</SelectTrigger>
+									<SelectContent>
+										{(
+											groupConfig.supportedGroupTypes || [
+												"organization",
+												"team",
+											]
+										).map((type) => (
+											<SelectItem key={type} value={type}>
+												{type.charAt(0).toUpperCase() + type.slice(1)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
 
 						{/* Description */}
 						<div className="space-y-2">

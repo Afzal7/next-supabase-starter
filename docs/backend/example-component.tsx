@@ -7,6 +7,8 @@ import {
 	useCreateGroupMutation,
 	useGetGroupQuery,
 	useGetGroupsQuery,
+	useGetInvitationsQuery,
+	useGetMembersQuery,
 	useInviteMemberMutation,
 } from "@/lib/rtk";
 
@@ -31,6 +33,24 @@ export function GroupsExample() {
 			skip: !selectedGroupId, // Don't fetch if no group selected
 		},
 	);
+
+	// Get group members
+	const { data: membersResponse, isLoading: membersLoading } = useGetMembersQuery(
+		{ groupId: selectedGroupId! },
+		{
+			skip: !selectedGroupId,
+		},
+	);
+
+	// Get group invitations
+	const { data: invitations, isLoading: invitationsLoading } = useGetInvitationsQuery(
+		selectedGroupId!,
+		{
+			skip: !selectedGroupId,
+		},
+	);
+
+	const members = membersResponse?.data || [];
 
 	// Invite member mutation
 	const [inviteMember, { isLoading: inviting }] = useInviteMemberMutation();
@@ -141,15 +161,15 @@ export function GroupsExample() {
 							<h3>{selectedGroup.name}</h3>
 							<p>{selectedGroup.description}</p>
 
-							<h4>Members ({selectedGroup.members.length})</h4>
-							{selectedGroup.members.map((member) => (
+							<h4>Members ({members.length})</h4>
+							{members.map((member) => (
 								<div key={member.id}>
 									{member.user.email} - {member.role}
 								</div>
 							))}
 
-							<h4>Pending Invitations ({selectedGroup.invitations.length})</h4>
-							{selectedGroup.invitations.map((invitation) => (
+							<h4>Pending Invitations ({invitations?.length || 0})</h4>
+							{invitations?.map((invitation) => (
 								<div key={invitation.id}>
 									{invitation.email} - {invitation.role} - {invitation.status}
 									{invitation.status === "pending" && (

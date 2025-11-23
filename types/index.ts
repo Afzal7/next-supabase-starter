@@ -1,53 +1,27 @@
 // Database Types (match database schema exactly)
-export type Group = {
-	id: string;
-	name: string;
-	slug: string;
-	description?: string;
-	owner_id: string;
-	group_type: string;
-	settings?: Record<string, unknown>;
-	is_deleted: boolean;
-	deleted_at?: string;
-	created_at: string;
-	updated_at: string;
-};
+// Database-generated types (auto-generated from schema)
+import type { Database } from "./database.types";
 
-export type GroupMember = {
-	id: string;
-	group_id: string;
-	user_id: string;
-	role: string; // Configurable, not hard-coded
-	permissions?: Record<string, boolean>;
-	joined_at: string;
-};
+export type Group = Database["public"]["Tables"]["groups"]["Row"];
+export type GroupInsert = Database["public"]["Tables"]["groups"]["Insert"];
+export type GroupUpdate = Database["public"]["Tables"]["groups"]["Update"];
 
-export type GroupInvitation = {
-	id: string;
-	group_id: string;
-	email: string;
-	role: string; // Configurable
-	invited_by: string;
-	token: string;
-	status: "pending" | "accepted" | "rejected" | "expired";
-	expires_at: string;
-	created_at: string;
-	accepted_at?: string;
-	details?: Record<string, unknown>; // Additional data like inviter_name
-};
+export type GroupMember = Database["public"]["Tables"]["group_members"]["Row"];
+export type GroupMemberInsert =
+	Database["public"]["Tables"]["group_members"]["Insert"];
+export type GroupMemberUpdate =
+	Database["public"]["Tables"]["group_members"]["Update"];
 
-export type GroupAuditLog = {
-	id: string;
-	group_id: string;
-	user_id?: string;
-	action: string;
-	details?: Record<string, unknown>;
-	ip_address?: string;
-	user_agent?: string;
-	created_at: string;
-};
+export type GroupInvitation =
+	Database["public"]["Tables"]["group_invitations"]["Row"];
+export type GroupInvitationInsert =
+	Database["public"]["Tables"]["group_invitations"]["Insert"];
+export type GroupInvitationUpdate =
+	Database["public"]["Tables"]["group_invitations"]["Update"];
 
-// API Request/Response Types
+export type GroupAuditLog =
+	Database["public"]["Tables"]["group_audit_log"]["Row"];
+
 export type CreateGroupRequest = {
 	name: string;
 	slug?: string;
@@ -58,7 +32,7 @@ export type CreateGroupRequest = {
 export type UpdateGroupRequest = {
 	name?: string;
 	description?: string;
-	settings?: Record<string, unknown>;
+	settings?: import("./database.types").Json;
 };
 
 export type CreateInvitationRequest = {
@@ -68,19 +42,6 @@ export type CreateInvitationRequest = {
 
 export type UpdateMemberRequest = {
 	role: string;
-};
-
-export type GetGroupsParams = {
-	page?: number;
-	limit?: number;
-	search?: string;
-	type?: string;
-};
-
-export type GetMembersParams = {
-	page?: number;
-	limit?: number;
-	search?: string;
 };
 
 // Extended Types for API Responses
@@ -98,13 +59,18 @@ export type MemberWithUser = GroupMember & {
 	};
 };
 
-export type InvitationWithGroup = GroupInvitation & {
-	group: Pick<Group, "id" | "name" | "slug">;
-	invited_by_user: {
-		id: string;
-		email: string;
-		name?: string;
-	};
+export type InvitationWithGroups = GroupInvitation & {
+	groups: Pick<Group, "id" | "name" | "slug" | "description" | "group_type">;
+};
+
+export type InvitationSummary = {
+	id: string;
+	email: string;
+	role: string;
+	status: string;
+	created_at: string | null;
+	expires_at: string;
+	group: Pick<Group, "id" | "name" | "description" | "group_type" | "slug">;
 };
 
 export type InvitationDetails = {
@@ -118,7 +84,7 @@ export type InvitationDetails = {
 		id: string;
 		name: string;
 		description?: string;
-		group_type: string;
+		group_type?: string;
 		slug: string;
 	};
 };
@@ -248,7 +214,7 @@ export interface GroupService {
 		userId: string,
 		options: PaginationOptions,
 	): Promise<PaginatedResponse<Group>>;
-	getGroupById(id: string, userId: string): Promise<GroupWithMembers>;
+	getGroupById(id: string, userId: string): Promise<Group>;
 	update(id: string, userId: string, data: UpdateGroupRequest): Promise<Group>;
 	delete(id: string, userId: string): Promise<void>;
 	transferOwnership(
@@ -264,6 +230,11 @@ export interface MemberService {
 		userId: string,
 		options?: PaginationOptions,
 	): Promise<PaginatedResponse<MemberWithUser>>;
+	getMember(
+		groupId: string,
+		memberId: string,
+		userId: string,
+	): Promise<MemberWithUser>;
 	addMember(
 		groupId: string,
 		userId: string,
@@ -272,14 +243,14 @@ export interface MemberService {
 	): Promise<GroupInvitation>;
 	updateMemberRole(
 		groupId: string,
-		memberId: string,
+		targetUserId: string,
 		newRole: string,
-		userId: string,
+		requestingUserId: string,
 	): Promise<GroupMember>;
 	removeMember(
 		groupId: string,
-		memberId: string,
-		userId: string,
+		targetUserId: string,
+		requestingUserId: string,
 	): Promise<void>;
 	canPerformAction(
 		userId: string,
@@ -300,8 +271,14 @@ export interface InvitationService {
 		userId: string,
 	): Promise<GroupInvitation[]>;
 	getInvitationByToken(token: string): Promise<GroupInvitation | null>;
+	getInvitationsByEmail(email: string): Promise<InvitationWithGroups[]>;
 	acceptInvitation(token: string, userId: string): Promise<{ groupId: string }>;
 	rejectInvitation(token: string, userId: string): Promise<void>;
+	acceptInvitationById(
+		invitationId: string,
+		userId: string,
+	): Promise<{ groupId: string }>;
+	rejectInvitationById(invitationId: string, userId: string): Promise<void>;
 	cancelInvitation(invitationId: string, userId: string): Promise<void>;
 	resendInvitation(invitationId: string, userId: string): Promise<void>;
 	cleanupExpiredInvitations(): Promise<number>;
@@ -319,16 +296,6 @@ export type PaginationOptions = {
 
 // Context Types for Middleware
 export type GroupContext = {
-	groupId: string;
-	userId: string;
-	role: string;
-	permissions: Record<string, boolean>;
-};
-
-export type RequestContext = {
-	userId?: string;
-	groupContext?: GroupContext;
-	requestId: string;
-	ipAddress: string;
-	userAgent?: string;
+	currentGroupId?: string;
+	currentGroupRole?: string;
 };

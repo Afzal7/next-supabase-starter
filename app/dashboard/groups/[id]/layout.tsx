@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetGroupQuery } from "@/lib/rtk/api";
+import { useGetGroupQuery, useGetMembersQuery } from "@/lib/rtk/api";
 import { InviteMemberModal } from "./_components/InviteMemberModal";
 
 interface GroupLayoutProps {
@@ -19,7 +19,16 @@ export default function GroupLayout({ children }: GroupLayoutProps) {
 	const params = useParams();
 	const groupId = params.id as string;
 
-	const { data: group, isLoading, error } = useGetGroupQuery(groupId);
+	const {
+		data: group,
+		isLoading: groupLoading,
+		error: groupError,
+	} = useGetGroupQuery(groupId);
+	const { data: membersResponse } = useGetMembersQuery({ groupId });
+
+	const isLoading = groupLoading;
+	const error = groupError;
+	const membersCount = membersResponse?.data?.length || 0;
 
 	if (isLoading) {
 		return (
@@ -69,11 +78,14 @@ export default function GroupLayout({ children }: GroupLayoutProps) {
 						</span>
 						<span className="flex items-center gap-1">
 							<Calendar className="h-4 w-4" />
-							Created {new Date(group.created_at).toLocaleDateString()}
+							Created{" "}
+							{group.created_at
+								? new Date(group.created_at as string).toLocaleDateString()
+								: "Unknown"}
 						</span>
 						<span className="flex items-center gap-1">
 							<Users className="h-4 w-4" animateOnHover />
-							{group.members?.length || 0} members
+							{membersCount} members
 						</span>
 					</div>
 				</div>

@@ -26,7 +26,8 @@ export async function authenticateRequest(req: NextRequest) {
 		},
 	});
 
-	// Get user from session (cookies)
+	// Get user from session (cookies) - this can be slow
+	// Since RLS is disabled, consider if authentication is needed for all endpoints
 	const {
 		data: { user },
 		error,

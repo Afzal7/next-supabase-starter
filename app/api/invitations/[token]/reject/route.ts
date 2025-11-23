@@ -15,7 +15,17 @@ export async function POST(
 
 		logger.info("Rejecting invitation", { userId: user.id, token });
 
-		await invitationService.rejectInvitation(token, user.id);
+		// Check if token is actually an invitation ID (UUID format)
+		const isInvitationId =
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+				token,
+			);
+
+		if (isInvitationId) {
+			await invitationService.rejectInvitationById(token, user.id);
+		} else {
+			await invitationService.rejectInvitation(token, user.id);
+		}
 
 		return successResponse({ message: "Invitation rejected successfully" });
 	} catch (error) {

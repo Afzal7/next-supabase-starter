@@ -1,5 +1,6 @@
 import { groupConfig } from "@/config/groups";
 import { createNotFoundError, handleDatabaseError } from "@/lib/errors";
+import { getUsersDetails } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
 	AppError,
@@ -52,12 +53,23 @@ export class GenericMemberService implements MemberService {
 
 		if (error) throw handleDatabaseError(error, "fetching group members");
 
-		// Get user details (simplified - in production you'd want to batch this)
-		const membersWithUsers: MemberWithUser[] = [];
-		for (const member of members || []) {
-			// Note: Getting user details from auth.users requires service role
-			// For now, we'll return basic member data
-			membersWithUsers.push({
+		// Get user details from auth.users using admin client
+		const userIds = (members || []).map((member) => member.user_id);
+		let usersDetails: Awaited<ReturnType<typeof getUsersDetails>> = [];
+		try {
+			usersDetails = userIds.length > 0 ? await getUsersDetails(userIds) : [];
+		} catch (error) {
+			// Log error but continue with empty user details
+			console.error("Failed to fetch user details:", error);
+		}
+
+		// Create a map for quick lookup
+		const userDetailsMap = new Map(usersDetails.map((user) => [user.id, user]));
+
+		// Transform members with user details
+		const membersWithUsers: MemberWithUser[] = (members || []).map((member) => {
+			const userDetails = userDetailsMap.get(member.user_id);
+			return {
 				id: member.id,
 				group_id: member.group_id,
 				user_id: member.user_id,
@@ -66,11 +78,12 @@ export class GenericMemberService implements MemberService {
 				joined_at: member.joined_at,
 				user: {
 					id: member.user_id,
-					email: "", // Would need separate query with proper permissions
-					name: undefined,
+					email: userDetails?.email || "",
+					name: userDetails?.name,
+					avatar_url: userDetails?.avatar_url,
 				},
-			});
-		}
+			};
+		});
 
 		const totalPages = Math.ceil((count || 0) / limit);
 
@@ -85,6 +98,57 @@ export class GenericMemberService implements MemberService {
 				has_prev: page > 1,
 			},
 		};
+	}
+
+	async getMember(
+		groupId: string,
+		memberId: string,
+		userId: string,
+	): Promise<MemberWithUser> {
+		const supabase = await createClient();
+
+		// Verify user has access to this group
+		await this.verifyGroupAccess(groupId, userId);
+
+		// Get the member
+		const { data: member, error } = await supabase
+			.from("group_members")
+			.select("id, group_id, user_id, role, permissions, joined_at")
+			.eq("user_id", memberId)
+			.eq("group_id", groupId)
+			.single();
+
+		if (error || !member) {
+			throw createNotFoundError("Member");
+		}
+
+		// Get user details from auth.users using admin client
+		let userDetails: Awaited<ReturnType<typeof getUsersDetails>>[0] | undefined;
+		try {
+			const usersDetails = await getUsersDetails([memberId]);
+			userDetails = usersDetails[0];
+		} catch (error) {
+			// Log error but continue with empty user details
+			console.error("Failed to fetch user details:", error);
+		}
+
+		// Transform member with user details
+		const memberWithUser: MemberWithUser = {
+			id: member.id,
+			group_id: member.group_id,
+			user_id: member.user_id,
+			role: member.role,
+			permissions: member.permissions,
+			joined_at: member.joined_at,
+			user: {
+				id: member.user_id,
+				email: userDetails?.email || "",
+				name: userDetails?.name,
+				avatar_url: userDetails?.avatar_url,
+			},
+		};
+
+		return memberWithUser;
 	}
 
 	async addMember(
@@ -118,9 +182,9 @@ export class GenericMemberService implements MemberService {
 
 	async updateMemberRole(
 		groupId: string,
-		memberId: string,
+		targetUserId: string,
 		newRole: string,
-		userId: string,
+		requestingUserId: string,
 	): Promise<GroupMember> {
 		const supabase = await createClient();
 
@@ -129,7 +193,7 @@ export class GenericMemberService implements MemberService {
 			.from("group_members")
 			.select("role")
 			.eq("group_id", groupId)
-			.eq("user_id", userId)
+			.eq("user_id", requestingUserId)
 			.single();
 
 		if (!userMembership || userMembership.role !== "owner") {
@@ -149,11 +213,11 @@ export class GenericMemberService implements MemberService {
 			);
 		}
 
-		// Cannot change owner role
+		// Find the member record by user_id and group_id
 		const { data: targetMember } = await supabase
 			.from("group_members")
-			.select("user_id, role")
-			.eq("id", memberId)
+			.select("id, user_id, role")
+			.eq("user_id", targetUserId)
 			.eq("group_id", groupId)
 			.single();
 
@@ -179,16 +243,15 @@ export class GenericMemberService implements MemberService {
 				role: newRole,
 				permissions: this.getRolePermissions(newRole),
 			})
-			.eq("id", memberId)
-			.eq("group_id", groupId)
+			.eq("id", targetMember.id)
 			.select()
 			.single();
 
 		if (error) throw handleDatabaseError(error, "updating member role");
 
 		// Log the change
-		await this.logAuditEvent(groupId, userId, "member_role_changed", {
-			memberId,
+		await this.logAuditEvent(groupId, requestingUserId, "member_role_changed", {
+			targetUserId,
 			oldRole: targetMember.role,
 			newRole,
 		});
@@ -198,16 +261,16 @@ export class GenericMemberService implements MemberService {
 
 	async removeMember(
 		groupId: string,
-		memberId: string,
-		userId: string,
+		targetUserId: string,
+		requestingUserId: string,
 	): Promise<void> {
 		const supabase = await createClient();
 
 		// Get member details
 		const { data: member } = await supabase
 			.from("group_members")
-			.select("user_id, role")
-			.eq("id", memberId)
+			.select("id, user_id, role")
+			.eq("user_id", targetUserId)
 			.eq("group_id", groupId)
 			.single();
 
@@ -217,8 +280,12 @@ export class GenericMemberService implements MemberService {
 
 		// Check permissions
 		const canRemove =
-			userId === member.user_id || // User can remove themselves
-			(await this.canPerformAction(userId, groupId, "manage_members")); // Or has manage permission
+			requestingUserId === member.user_id || // User can remove themselves
+			(await this.canPerformAction(
+				requestingUserId,
+				groupId,
+				"manage_members",
+			)); // Or has manage permission
 
 		if (!canRemove) {
 			throw new AppError(ErrorCode.FORBIDDEN, "Cannot remove this member", 403);
@@ -239,15 +306,15 @@ export class GenericMemberService implements MemberService {
 		const { error } = await supabase
 			.from("group_members")
 			.delete()
-			.eq("id", memberId)
+			.eq("id", member.id)
 			.eq("group_id", groupId);
 
 		if (error) throw handleDatabaseError(error, "removing member");
 
 		// Log the removal
-		await this.logAuditEvent(groupId, userId, "member_removed", {
-			memberId,
+		await this.logAuditEvent(groupId, requestingUserId, "member_removed", {
 			removedUserId: member.user_id,
+			removedRole: member.role,
 		});
 	}
 
@@ -277,7 +344,15 @@ export class GenericMemberService implements MemberService {
 			.eq("user_id", userId)
 			.single();
 
-		return membership?.permissions?.[action] === true || false;
+		const permissions = membership?.permissions;
+		if (
+			!permissions ||
+			typeof permissions !== "object" ||
+			Array.isArray(permissions)
+		) {
+			return false;
+		}
+		return Boolean((permissions as Record<string, unknown>)[action]);
 	}
 
 	private async verifyGroupAccess(
@@ -328,10 +403,10 @@ export class GenericMemberService implements MemberService {
 		const supabase = await createClient();
 
 		await supabase.from("group_audit_log").insert({
-			group_id: groupId,
-			user_id: userId,
 			action,
-			details,
+			user_id: userId,
+			group_id: groupId,
+			details: details as any,
 		});
 	}
 }

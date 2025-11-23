@@ -16,11 +16,11 @@ export const updateGroupSchema = z.object({
 
 export const inviteMemberSchema = z.object({
 	email: z.string().email(),
-	role: z.enum(["owner", "admin", "member"] as const), // Default roles, can be made dynamic
+	role: z.enum(groupConfig.defaultRoles as [string, ...string[]]),
 });
 
 export const updateMemberRoleSchema = z.object({
-	role: z.enum(["owner", "admin", "member"] as const),
+	role: z.enum(groupConfig.defaultRoles as [string, ...string[]]),
 });
 
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;

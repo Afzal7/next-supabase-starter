@@ -7,6 +7,29 @@ import { logger } from "@/lib/utils/logger";
 import { successResponse } from "@/lib/utils/responses";
 import { validateRequest } from "@/lib/utils/validators";
 
+export async function GET(
+	req: NextRequest,
+	{ params }: { params: Promise<{ id: string; userId: string }> },
+) {
+	try {
+		const { id, userId } = await params;
+		const user = await authenticateRequest(req);
+
+		logger.info("Fetching member details", {
+			userId: user.id,
+			groupId: id,
+			targetUserId: userId,
+		});
+
+		const member = await memberService.getMember(id, userId, user.id);
+
+		return successResponse(member);
+	} catch (error) {
+		logger.error("Failed to fetch member", error);
+		return errorHandler(error);
+	}
+}
+
 export async function PUT(
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string; userId: string }> },
@@ -17,7 +40,7 @@ export async function PUT(
 		const input = await validateRequest(req, updateMemberRoleSchema);
 
 		logger.info("Updating member role", {
-			userId: user.id,
+			requestingUserId: user.id,
 			groupId: id,
 			targetUserId: userId,
 			newRole: input.role,

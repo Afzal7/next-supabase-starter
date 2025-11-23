@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
 	useCancelInvitationMutation,
-	useGetGroupQuery,
+	useGetInvitationsQuery,
 	useResendInvitationMutation,
 } from "@/lib/rtk/api";
 import { InviteMemberModal } from "../_components/InviteMemberModal";
@@ -25,11 +25,15 @@ export default function GroupInvitationsPage() {
 	const params = useParams();
 	const groupId = params.id as string;
 
-	const { data: group } = useGetGroupQuery(groupId);
+	const {
+		data: invitations,
+		isLoading,
+		error,
+	} = useGetInvitationsQuery(groupId);
 	const [resendInvitation] = useResendInvitationMutation();
 	const [cancelInvitation] = useCancelInvitationMutation();
 
-	if (!group) return null;
+	if (isLoading || error) return null;
 
 	return (
 		<div className="space-y-6">
@@ -38,9 +42,9 @@ export default function GroupInvitationsPage() {
 				<InviteMemberModal groupId={groupId} />
 			</div>
 
-			{group.invitations && group.invitations.length > 0 ? (
+			{invitations && invitations.length > 0 ? (
 				<div className="grid gap-4">
-					{group.invitations.map((invitation) => (
+					{invitations.map((invitation) => (
 						<Card
 							key={invitation.id}
 							className="hover:shadow-md transition-shadow"
@@ -57,7 +61,9 @@ export default function GroupInvitationsPage() {
 											</p>
 											<p className="text-sm text-secondary">
 												Invited{" "}
-												{new Date(invitation.created_at).toLocaleDateString()}
+												{invitation.created_at
+													? new Date(invitation.created_at).toLocaleDateString()
+													: "Unknown"}
 											</p>
 										</div>
 									</div>
