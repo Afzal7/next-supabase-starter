@@ -1,4 +1,4 @@
-# DESIGN-SPEC-org-scenarios-v2.md
+# DESIGN-SPEC-org-scenarios-v3.md
 
 ## SECTION 1: USER JOURNEYS
 
@@ -18,15 +18,15 @@ STEP 1: Dashboard Landing
     Success: N/A
 
 STEP 2: Create Organization Modal
-  User sees: Name input, slug input (auto-generated), description textarea, type select, create/cancel buttons
-  User does: Fills form, submits
-  System responds: Loading spinner, success toast "Organization created successfully", modal closes, dashboard refreshes with new org context
+  User sees: Modal with title "Create Organization", name input labeled "Organization Name" with placeholder "My Organization", slug input labeled "Slug" with placeholder "my-organization" (auto-generated from name), description textarea labeled "Description (optional)" with placeholder "Brief description of your organization", type select labeled "Type" with options "Personal", "Team", "Enterprise" (default "Team"), primary blue "Create Organization" button, secondary gray "Cancel" button
+  User does: Fills required fields (name, slug), submits
+  System responds: Loading spinner on button, form fields disabled, success green toast "Organization created successfully", modal closes, dashboard refreshes with new org context
 
   States:
-    Empty: Form ready with auto-generated slug
-    Loading: Button shows "Creating..." with spinner, form disabled
-    Error: Red text "Name is required", "Slug already taken", "Limit exceeded"
-    Success: Modal closes, org becomes active
+    Empty: Form ready with auto-generated slug, all fields enabled
+    Loading: Button shows "Creating..." with spinner, all form fields disabled
+    Error: Red text below name field "Organization name is required", below slug field "This slug is already taken. Please choose a different one.", below form "You've reached the maximum number of organizations (5). Leave an organization to create a new one."
+    Success: Modal closes, org becomes active, dashboard shows org context
 
 EXIT:
   User sees: Dashboard with active organization context, workspace sidebar appears, breadcrumb shows organization name
@@ -37,15 +37,15 @@ Entry: User clicks invitation link from email, has no organization memberships
 Context: Invited to join an organization as first membership
 
 STEP 1: Invitation Landing Page
-  User sees: Card with organization name/logo, "You've been invited by [inviter name]", role offered, organization description, accept/reject buttons
-  User does: Clicks accept
-  System responds: If not logged in, redirects to login with return URL; after login, shows invitation page again
+  User sees: Centered card with organization logo (default building icon if none), title "You've been invited to join [Org Name]", subtitle "Invited by [Inviter Name]", role badge "Role: [Role]", description paragraph "[Org Description]", green "Accept Invitation" button, red "Decline" button
+  User does: Clicks "Accept Invitation"
+  System responds: If not logged in, redirects to login with message "Please sign in to accept this invitation", return URL preserved; after login, shows invitation page again
 
   States:
-    Empty: Invitation details displayed
-    Loading: Buttons show "Processing..." with spinners
-    Error: Red error "This invitation is invalid or has expired" with "Request new invitation" button
-    Success: Green success "Successfully joined [org name]"
+    Empty: Invitation details displayed, buttons enabled
+    Loading: Buttons show "Processing..." with spinners, disabled
+    Error: Red banner at top "This invitation is invalid or has expired. Please request a new invitation from the organization admin." with "Request New Invitation" button
+    Success: Green banner "Successfully joined [Org Name] as [Role]"
 
 DECISION POINT:
   If user not logged in → Redirect to login page with "Please sign in to accept this invitation" message, return URL preserved
@@ -88,25 +88,25 @@ Entry: User in dashboard with multiple organization memberships
 Context: User needs to switch context between organizations
 
 STEP 1: Organization Switcher
-  User sees: Sidebar header with dropdown showing current active organization name/type, chevron indicator, visual highlight for active state
-  User does: Clicks dropdown to open organization list
-  System responds: Dropdown expands showing all user's organizations with icons, keyboard navigable (Tab/Arrow/Enter)
+  User sees: Sidebar top section with current organization name in bold text, type in smaller gray text (e.g., "Acme Corp (Team)"), dropdown arrow icon, blue highlight border around the switcher area
+  User does: Clicks the switcher area
+  System responds: Dropdown expands showing list of all user's organizations, keyboard navigable (Tab/Arrow/Enter keys)
 
   States:
-    Empty: Dropdown shows current org
+    Empty: Dropdown shows current org, list ready
     Loading: N/A
     Error: N/A
     Success: N/A
 
 STEP 2: Select Organization
-  User sees: List of organizations (name, type), "Create Organization" option at bottom, current org marked with checkmark
+  User sees: Dropdown list with each organization showing name, type in parentheses, member count "X members", current org has green checkmark icon, bottom item "Create Organization" with plus icon
   User does: Clicks different organization
-  System responds: Dropdown closes, active context switches, all org-dependent content refreshes, breadcrumb updates, workspace sidebar updates
+  System responds: Dropdown closes, active context switches, all org-dependent content refreshes, breadcrumb updates to "Home > [New Org Name]", workspace sidebar updates with new org's sections
 
   States:
-    Empty: List populated
-    Loading: Brief loading indicator during context switch (<500ms)
-    Error: If switch fails, red error "Failed to switch organization" with retry button
+    Empty: List populated with all orgs
+    Loading: Brief loading overlay on dashboard during switch (<500ms)
+    Error: If switch fails, red toast "Failed to switch organization. Please try again." with retry button
     Success: All UI updates to new org context
 
 DECISION POINT:
@@ -151,26 +151,26 @@ Entry: User in organization settings, wants to leave membership
 Context: User has multiple orgs or wants to remove membership
 
 STEP 1: Organization Settings
-  User sees: Settings page with "Leave Organization" button (red), warning text "This action cannot be undone"
+  User sees: Organization settings page with red "Leave Organization" button at bottom, above it warning text in red "This action cannot be undone. You'll lose access to all organization resources."
   User does: Clicks "Leave Organization"
   System responds: Opens confirmation modal
 
   States:
-    Empty: Settings page displayed
+    Empty: Settings page displayed, button enabled
     Loading: N/A
     Error: N/A
     Success: N/A
 
 STEP 2: Confirmation Modal
-  User sees: Warning "Are you sure you want to leave [org name]? You'll lose access to all its resources.", confirm/cancel buttons
-  User does: Clicks confirm
+  User sees: Modal with title "Leave Organization", warning text "Are you sure you want to leave [Org Name]? You'll lose access to all its resources and data.", red "Leave Organization" button, gray "Cancel" button
+  User does: Clicks "Leave Organization"
   System responds: Loading, success message, redirects to dashboard
 
   States:
-    Empty: Modal displayed
-    Loading: Button shows "Leaving..." with spinner
-    Error: Red error "Cannot leave organization: you are the only owner" with "Transfer ownership first" button
-    Success: Modal closes, redirect to dashboard
+    Empty: Modal displayed, buttons enabled
+    Loading: Button shows "Leaving..." with spinner, buttons disabled
+    Error: Red text in modal "Cannot leave organization: you are the only owner. Transfer ownership to another member first." with "Transfer Ownership" button
+    Success: Modal closes, green toast "You have left [Org Name]", redirect to dashboard
 
 DECISION POINT:
   If leaving active org and has others → Switch to next available org
@@ -188,10 +188,10 @@ System shall: Update all UI elements to reflect new active organization context
 Why: Ensures consistent experience across all features
 
 Acceptance Criteria:
-  Given user switches org, When switch completes, Then sidebar workspace shows new org's sections
-  Given user switches org, When switch completes, Then breadcrumb shows new org name
-  Given user switches org, When switch completes, Then main content shows new org's data
-  Given user creates first org, When creation succeeds, Then org becomes active, workspace appears
+  Given user switches org, When switch completes, Then sidebar workspace shows new org's sections (e.g., "Members", "Groups", "Settings")
+  Given user switches org, When switch completes, Then breadcrumb shows "Home > [New Org Name]"
+  Given user switches org, When switch completes, Then main content shows new org's data (e.g., overview card with org description and stats)
+  Given user creates first org, When creation succeeds, Then org becomes active, workspace sidebar appears with sections "Members", "Groups", "Invitations", "Settings"
 
 Test: Switch between orgs, verify all UI updates immediately
 
@@ -201,11 +201,11 @@ System shall: Show specific prompts for org-dependent features, disable/hide org
 Why: Guides users to create or join organizations before accessing dependent features
 
 Acceptance Criteria:
-  Given no active org, When user views dashboard, Then show "Create your first organization" card with icon and description
-  Given no active org, When user tries org-dependent nav, Then show tooltip "Create an organization first" and disable link
-  Given no active org, When user accesses org page URL, Then redirect to dashboard with red banner "Please create or join an organization first"
-  Given no active org, When user clicks disabled nav, Then show modal "Organization Required" with create/join options
-  Given org created, When user views dashboard, Then show org overview instead of prompt
+  Given no active org, When user views dashboard, Then show card with building icon, title "Create your first organization", description "Start collaborating by creating an organization", primary blue "Create Organization" button, secondary "Join via Invitation" link
+  Given no active org, When user tries org-dependent nav, Then show tooltip "Create an organization first" on hover, link disabled with gray color and no pointer cursor
+  Given no active org, When user accesses org page URL, Then redirect to dashboard with red banner "Please create or join an organization first" and "Create Organization" button
+  Given no active org, When user clicks disabled nav, Then show modal "Organization Required" with title "Organization Required", message "This feature requires an active organization. Create one to get started.", "Create Organization" button, "Join via Invitation" link
+  Given org created, When user views dashboard, Then show org overview card with org name, description, member count "X members", instead of prompt
 
 REQ-3: Organization Switching UI
 When user: Has multiple organizations
@@ -213,11 +213,11 @@ System shall: Provide clear, accessible organization switcher with visual feedba
 Why: Enables seamless context switching between organizations
 
 Acceptance Criteria:
-  Given multiple orgs, When user opens switcher, Then show list with org names, types, and member counts
-  Given multiple orgs, When user selects org, Then show loading during switch (<500ms), then update all context
-  Given switch fails, When error occurs, Then show retry option, keep previous org active
-  Given keyboard navigation, When using Tab/Arrow/Enter, Then switcher fully accessible with focus management
-  Given Cmd/Ctrl+K, When pressed, Then open org switcher (optional shortcut)
+  Given multiple orgs, When user opens switcher, Then show dropdown list with each org name, type in parentheses, member count "X members", current org with green checkmark icon
+  Given multiple orgs, When user selects org, Then show loading overlay on dashboard (<500ms), then update sidebar, breadcrumb to "Home > [New Org Name]", main content
+  Given switch fails, When error occurs, Then show red toast "Failed to switch organization. Please try again." with "Retry" button, keep previous org active
+  Given keyboard navigation, When using Tab/Arrow/Enter, Then switcher opens/closes, items selectable, focus moves logically with visible focus ring
+  Given Cmd/Ctrl+K, When pressed, Then open org switcher dropdown (optional keyboard shortcut)
 
 Test: Tab through switcher, select different org, verify all content updates
 
@@ -227,10 +227,9 @@ System shall: Provide clear next steps with prominent CTAs and progressive guida
 Why: Reduces friction for new users getting started
 
 Acceptance Criteria:
-  Given first login no org, When dashboard loads, Then show hero section with "Create Organization" primary button
-  Given first login no org, When dashboard loads, Then show secondary "Join via Invitation" link
-  Given first login no org, When sidebar loads, Then platform nav available, workspace section shows "Get started by creating an organization"
-  Given org created, When dashboard refreshes, Then onboarding content replaced with org overview
+  Given first login no org, When dashboard loads, Then show hero section with large "Welcome to [App Name]!" title, subtitle "Get started by creating your first organization", primary blue "Create Organization" button, secondary gray "Join via Invitation" link
+  Given first login no org, When sidebar loads, Then platform nav (Profile, Settings) available, workspace section hidden or shows grayed text "Get started by creating an organization"
+  Given org created, When dashboard refreshes, Then onboarding content replaced with org overview card showing org name, type, member count
 
 REQ-5: Invitation Handling
 When user: Receives organization invitation
@@ -238,10 +237,10 @@ System shall: Handle invitations appropriately based on user's current org statu
 Why: Ensures smooth onboarding for invited users
 
 Acceptance Criteria:
-  Given invitation link, no orgs, When user accepts, Then org becomes active after joining
-  Given invitation link, has orgs, When user accepts, Then org added to memberships, active remains unchanged
-  Given invitation expired, When user clicks, Then show "This invitation has expired" with resend option
-  Given invitation for existing member, When user clicks, Then show "You're already a member" message
+  Given invitation link, no orgs, When user accepts, Then org becomes active, dashboard shows org context with success banner "Welcome to [Org Name]!"
+  Given invitation link, has orgs, When user accepts, Then org added to memberships, active remains unchanged, success banner "You can now switch to [Org Name] using the organization switcher"
+  Given invitation expired, When user clicks, Then show red banner "This invitation has expired. Please request a new invitation from the organization admin." with "Request New Invitation" button
+  Given invitation for existing member, When user clicks, Then show yellow banner "You're already a member of this organization."
 
 REQ-6: Organization Membership Management
 When user: Views or manages organization memberships
@@ -249,10 +248,10 @@ System shall: Show clear overview of all memberships with leave options
 Why: Gives users control over their org participations
 
 Acceptance Criteria:
-  Given multiple orgs, When user views switcher, Then show all orgs with leave option (X button)
-  Given user clicks leave, When confirms, Then remove from membership, switch to next org or no-org state
-  Given leaving last org, When confirms, Then return to onboarding state
-  Given leaving active org, When confirms, Then switch to next available org automatically
+  Given multiple orgs, When user views switcher, Then show all orgs, each with small red X button on hover for leaving
+  Given user clicks leave, When confirms in modal, Then remove from membership, if leaving active, switch to next org automatically, show green toast "You have left [Org Name]"
+  Given leaving last org, When confirms, Then return to onboarding state with "Create your first organization" card
+  Given leaving active org, When confirms, Then switch to next available org, update sidebar, breadcrumb, main content
 
 ## SECTION 3: BUSINESS RULES
 
