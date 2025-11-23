@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, Mail } from "lucide-react";
+import { AlertCircle, Loader2, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
-import { BadgeCheck } from "@/components/animate-ui/icons/badge-check";
+import { toast } from "sonner";
 import { User } from "@/components/animate-ui/icons/user";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,7 @@ export default function ProfilePage() {
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
-	const [error, setError] = useState<string | null>(null);
-	const [success, setSuccess] = useState<string | null>(null);
+	const [nameError, setNameError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const getUser = async () => {
@@ -50,11 +50,35 @@ export default function ProfilePage() {
 		getUser();
 	}, []);
 
+	const validateName = (value: string) => {
+		if (!value.trim()) {
+			return "Name is required";
+		}
+		if (value.trim().length < 2) {
+			return "Name must be at least 2 characters";
+		}
+		if (value.trim().length > 50) {
+			return "Name must be less than 50 characters";
+		}
+		return null;
+	};
+
+	const handleNameChange = (value: string) => {
+		setName(value);
+		const error = validateName(value);
+		setNameError(error);
+	};
+
 	const handleUpdateProfile = async (e: React.FormEvent) => {
 		e.preventDefault();
+
+		const error = validateName(name);
+		if (error) {
+			setNameError(error);
+			return;
+		}
+
 		setIsUpdating(true);
-		setError(null);
-		setSuccess(null);
 
 		try {
 			const supabase = createClient();
@@ -66,38 +90,20 @@ export default function ProfilePage() {
 
 			if (error) throw error;
 
-			setSuccess("Profile updated successfully!");
+			toast.success("Profile updated successfully!");
 			setUser((prev) => (prev ? { ...prev, name: name.trim() } : null));
+			setNameError(null);
 		} catch (error: unknown) {
-			setError(
-				error instanceof Error ? error.message : "Failed to update profile",
-			);
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to update profile";
+			toast.error(errorMessage);
 		} finally {
 			setIsUpdating(false);
 		}
 	};
 
 	if (isLoading) {
-		return (
-			<div className="space-y-6">
-				<div className="flex items-center gap-4">
-					<div className="w-20 h-20 bg-muted rounded-full animate-pulse" />
-					<div className="space-y-2">
-						<div className="h-6 w-48 bg-muted rounded animate-pulse" />
-						<div className="h-4 w-32 bg-muted rounded animate-pulse" />
-					</div>
-				</div>
-				<Card>
-					<CardHeader>
-						<div className="h-5 w-32 bg-muted rounded animate-pulse" />
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="h-10 w-full bg-muted rounded animate-pulse" />
-						<div className="h-10 w-full bg-muted rounded animate-pulse" />
-					</CardContent>
-				</Card>
-			</div>
-		);
+		return <LoadingSkeleton type="profile" />;
 	}
 
 	if (!user) {
@@ -139,17 +145,32 @@ export default function ProfilePage() {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<form onSubmit={handleUpdateProfile} className="space-y-4">
+					<form onSubmit={handleUpdateProfile} className="space-y-4" noValidate>
 						<div className="space-y-2">
 							<Label htmlFor="name">Display Name</Label>
 							<Input
 								id="name"
 								type="text"
 								value={name}
-								onChange={(e) => setName(e.target.value)}
+								onChange={(e) => handleNameChange(e.target.value)}
 								placeholder="Enter your display name"
-								className="transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20"
+								aria-describedby={nameError ? "name-error" : undefined}
+								aria-invalid={!!nameError}
+								className={`transition-all duration-normal ease-smooth focus:ring-2 focus:ring-primary/20 ${
+									nameError
+										? "border-destructive focus:ring-destructive/20"
+										: ""
+								}`}
 							/>
+							{nameError && (
+								<p
+									id="name-error"
+									className="text-sm text-destructive mt-1"
+									role="alert"
+								>
+									{nameError}
+								</p>
+							)}
 						</div>
 
 						<div className="space-y-2">
@@ -159,34 +180,30 @@ export default function ProfilePage() {
 								type="email"
 								value={email}
 								disabled
+								aria-describedby="email-help"
 								className="bg-muted cursor-not-allowed"
 							/>
-							<p className="text-xs text-muted-foreground">
+							<p id="email-help" className="text-xs text-muted-foreground">
 								Email cannot be changed here. Contact support if needed.
 							</p>
 						</div>
 
-						{error && (
-							<Alert variant="destructive">
-								<AlertCircle className="h-4 w-4" />
-								<AlertDescription>{error}</AlertDescription>
-							</Alert>
-						)}
-
-						{success && (
-							<Alert>
-								<BadgeCheck className="h-4 w-4" />
-								<AlertDescription>{success}</AlertDescription>
-							</Alert>
-						)}
-
 						<div className="flex gap-3">
 							<Button
 								type="submit"
-								disabled={isUpdating || !name.trim()}
-								className="bg-primary hover:bg-primary/90"
+								disabled={isUpdating || !name.trim() || !!nameError}
+								aria-describedby={isUpdating ? "updating-status" : undefined}
+								className="bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
 							>
-								{isUpdating ? "Updating..." : "Update Profile"}
+								{isUpdating && (
+									<Loader2
+										className="h-4 w-4 mr-2 animate-spin"
+										aria-hidden="true"
+									/>
+								)}
+								<span id="updating-status" aria-live="polite">
+									{isUpdating ? "Updating..." : "Update Profile"}
+								</span>
 							</Button>
 						</div>
 					</form>

@@ -1,8 +1,11 @@
 "use client";
 
-import { Mail, MoreHorizontal, UserX } from "lucide-react";
+import { Loader2, Mail, MoreHorizontal, UserX } from "lucide-react";
 import { useParams } from "next/navigation";
-
+import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +22,6 @@ import {
 	useGetInvitationsQuery,
 	useResendInvitationMutation,
 } from "@/lib/rtk/api";
-import { InviteMemberModal } from "../_components/InviteMemberModal";
 
 export default function GroupInvitationsPage() {
 	const params = useParams();
@@ -29,17 +31,64 @@ export default function GroupInvitationsPage() {
 		data: invitations,
 		isLoading,
 		error,
+		refetch,
 	} = useGetInvitationsQuery(groupId);
-	const [resendInvitation] = useResendInvitationMutation();
-	const [cancelInvitation] = useCancelInvitationMutation();
+	const [resendInvitation, { isLoading: isResending }] =
+		useResendInvitationMutation();
+	const [cancelInvitation, { isLoading: isCancelling }] =
+		useCancelInvitationMutation();
 
-	if (isLoading || error) return null;
+	const handleResendInvitation = async (invitationId: string) => {
+		try {
+			await resendInvitation(invitationId).unwrap();
+			toast.success("Invitation resent successfully.");
+		} catch (_error) {
+			toast.error("Failed to resend invitation. Please try again.");
+		}
+	};
+
+	const handleCancelInvitation = async (
+		groupId: string,
+		invitationId: string,
+	) => {
+		try {
+			await cancelInvitation({ groupId, invitationId }).unwrap();
+			toast.success("Invitation cancelled successfully.");
+		} catch (_error) {
+			toast.error("Failed to cancel invitation. Please try again.");
+		}
+	};
+
+	if (isLoading) {
+		return (
+			<div className="space-y-6">
+				<div className="flex items-center justify-between">
+					<h3 className="text-lg font-semibold">Pending Invitations</h3>
+				</div>
+				<LoadingSkeleton type="list" count={3} className="grid gap-4" />
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="space-y-6">
+				<div className="flex items-center justify-between">
+					<h3 className="text-lg font-semibold">Pending Invitations</h3>
+				</div>
+				<ErrorState
+					message="Failed to load invitations. Please try again."
+					onRetry={() => refetch()}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<h3 className="text-lg font-semibold">Pending Invitations</h3>
-				<InviteMemberModal groupId={groupId} />
+				{/* <InviteMemberModal groupId={groupId} /> */}
 			</div>
 
 			{invitations && invitations.length > 0 ? (
@@ -47,7 +96,7 @@ export default function GroupInvitationsPage() {
 					{invitations.map((invitation) => (
 						<Card
 							key={invitation.id}
-							className="hover:shadow-md transition-shadow"
+							className="hover:shadow-md hover:scale-[1.01] transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
 						>
 							<CardContent className="p-4">
 								<div className="flex items-center justify-between">
@@ -89,21 +138,28 @@ export default function GroupInvitationsPage() {
 													<DropdownMenuLabel>Actions</DropdownMenuLabel>
 													<DropdownMenuSeparator />
 													<DropdownMenuItem
-														onClick={() => resendInvitation(invitation.id)}
+														onClick={() =>
+															handleResendInvitation(invitation.id)
+														}
+														disabled={isResending}
 													>
+														{isResending && (
+															<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+														)}
 														Resend Invitation
 													</DropdownMenuItem>
 													<DropdownMenuItem
 														onClick={() => {
 															if (confirm("Cancel this invitation?")) {
-																cancelInvitation({
-																	groupId,
-																	invitationId: invitation.id,
-																});
+																handleCancelInvitation(groupId, invitation.id);
 															}
 														}}
 														className="text-destructive"
+														disabled={isCancelling}
 													>
+														{isCancelling && (
+															<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+														)}
 														<UserX className="h-4 w-4 mr-2" />
 														Cancel Invitation
 													</DropdownMenuItem>
@@ -117,18 +173,11 @@ export default function GroupInvitationsPage() {
 					))}
 				</div>
 			) : (
-				<Card>
-					<CardContent className="p-12 text-center">
-						<Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-						<h3 className="text-lg font-semibold text-primary mb-2">
-							No pending invitations
-						</h3>
-						<p className="text-secondary mb-4">
-							Send invitations to add new members to your group.
-						</p>
-						<InviteMemberModal groupId={groupId} />
-					</CardContent>
-				</Card>
+				<EmptyState
+					icon={Mail}
+					title="No pending invitations"
+					description="Send invitations to add new members to your group."
+				/>
 			)}
 		</div>
 	);

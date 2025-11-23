@@ -4,10 +4,11 @@ import { Calendar, Check, Mail, Users, X } from "lucide-react";
 import Link from "next/link";
 
 import { FadeIn } from "@/components/animations/fade-in";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { groupConfig } from "@/config/groups";
 import { useGetUserInvitationsQuery } from "@/lib/rtk/api";
 import type { InvitationSummary } from "@/types";
@@ -34,21 +35,11 @@ export default function UserInvitationsPage() {
 					</div>
 				</div>
 
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{Array.from({ length: 3 }).map((_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: Fixed number of skeleton items, order never changes
-						<Card key={i} className="shadow-sm">
-							<CardHeader>
-								<Skeleton className="h-5 w-3/4" />
-								<Skeleton className="h-4 w-1/2" />
-							</CardHeader>
-							<CardContent>
-								<Skeleton className="h-4 w-full mb-2" />
-								<Skeleton className="h-4 w-2/3" />
-							</CardContent>
-						</Card>
-					))}
-				</div>
+				<LoadingSkeleton
+					type="list"
+					count={3}
+					className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+				/>
 			</div>
 		);
 	}
@@ -67,20 +58,10 @@ export default function UserInvitationsPage() {
 					</div>
 				</div>
 
-				<Alert variant="destructive">
-					<Mail className="h-4 w-4" />
-					<AlertDescription className="flex items-center justify-between">
-						<span>Failed to load invitations. Please try again.</span>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => refetch()}
-							className="ml-4"
-						>
-							Retry
-						</Button>
-					</AlertDescription>
-				</Alert>
+				<ErrorState
+					message="Failed to load invitations. Please try again."
+					onRetry={() => refetch()}
+				/>
 			</div>
 		);
 	}
@@ -104,7 +85,7 @@ export default function UserInvitationsPage() {
 						{invitations.invitations.map((invitation: InvitationSummary) => (
 							<Card
 								key={invitation.id}
-								className="shadow-sm hover:shadow-md transition-all duration-normal ease-smooth"
+								className="shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
 							>
 								<CardHeader>
 									<div className="flex items-start justify-between">
@@ -164,26 +145,19 @@ export default function UserInvitationsPage() {
 						))}
 					</div>
 				) : (
-					<Card className="shadow-sm">
-						<CardContent className="p-12 text-center space-y-4">
-							<div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-								<Mail className="h-8 w-8 text-secondary" />
-							</div>
-							<div>
-								<h3 className="text-lg font-semibold text-primary mb-2">
-									No pending invitations
-								</h3>
-								<p className="text-secondary mb-6">
-									You don't have any pending invitations at the moment.
-								</p>
-								<Link href="/dashboard">
-									<Button className="bg-primary hover:bg-primary/90">
-										Browse {groupConfig.entityNamePlural}
-									</Button>
-								</Link>
-							</div>
-						</CardContent>
-					</Card>
+					<Link href="/dashboard">
+						<EmptyState
+							icon={Mail}
+							title="No pending invitations"
+							description="You don't have any pending invitations at the moment."
+							action={{
+								label: `Browse ${groupConfig.entityNamePlural}`,
+								onClick: () => {
+									// Link will handle navigation
+								},
+							}}
+						/>
+					</Link>
 				)}
 			</div>
 		</FadeIn>

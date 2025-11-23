@@ -3,13 +3,14 @@
 import { useParams } from "next/navigation";
 import { Settings } from "@/components/animate-ui/icons/settings";
 import { Users } from "@/components/animate-ui/icons/users";
-
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { groupConfig } from "@/config/groups";
 import {
 	useGetGroupQuery,
-	useGetMembersQuery,
 	useGetInvitationsQuery,
+	useGetMembersQuery,
 } from "@/lib/rtk/api";
 
 export default function GroupOverviewPage() {
@@ -20,17 +21,43 @@ export default function GroupOverviewPage() {
 		data: group,
 		isLoading: groupLoading,
 		error: groupError,
+		refetch: refetchGroup,
 	} = useGetGroupQuery(groupId);
-	const { data: membersResponse, isLoading: membersLoading } =
-		useGetMembersQuery({ groupId });
-	const { data: invitations, isLoading: invitationsLoading } =
-		useGetInvitationsQuery(groupId);
+	const {
+		data: membersResponse,
+		isLoading: membersLoading,
+		refetch: refetchMembers,
+	} = useGetMembersQuery({ groupId });
+	const {
+		data: invitations,
+		isLoading: invitationsLoading,
+		refetch: refetchInvitations,
+	} = useGetInvitationsQuery(groupId);
 
 	const isLoading = groupLoading || membersLoading || invitationsLoading;
 	const error = groupError;
 
-	if (isLoading || error || !group) {
-		return null; // Layout handles loading and error states
+	const refetch = () => {
+		refetchGroup();
+		refetchMembers();
+		refetchInvitations();
+	};
+
+	if (isLoading) {
+		return <LoadingSkeleton type="card" className="space-y-6" />;
+	}
+
+	if (error) {
+		return (
+			<ErrorState
+				message="Failed to load group information. Please try again."
+				onRetry={refetch}
+			/>
+		);
+	}
+
+	if (!group) {
+		return <ErrorState message="Group not found." />;
 	}
 
 	const members = membersResponse?.data || [];
@@ -38,7 +65,7 @@ export default function GroupOverviewPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="grid gap-6 md:grid-cols-2">
+			<div className="grid gap-4 md:grid-cols-2 lg:gap-6">
 				{/* Group Info */}
 				<Card>
 					<CardHeader>

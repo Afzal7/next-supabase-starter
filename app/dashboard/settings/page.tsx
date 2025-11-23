@@ -1,10 +1,9 @@
 "use client";
 
-import { Palette, Shield } from "lucide-react";
+import { Loader2, Palette, Shield } from "lucide-react";
 import { useState } from "react";
-import { BadgeCheck } from "@/components/animate-ui/icons/badge-check";
+import { toast } from "sonner";
 import { Bell } from "@/components/animate-ui/icons/bell";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -37,20 +36,20 @@ export default function SettingsPage() {
 	});
 
 	const [isSaving, setIsSaving] = useState(false);
-	const [success, setSuccess] = useState<string | null>(null);
 
 	const handleSaveSettings = async () => {
 		setIsSaving(true);
-		setSuccess(null);
 
-		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		try {
+			// Simulate API call
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		setSuccess("Settings saved successfully!");
-		setIsSaving(false);
-
-		// Clear success message after 3 seconds
-		setTimeout(() => setSuccess(null), 3000);
+			toast.success("Settings saved successfully!");
+		} catch (_error) {
+			toast.error("Failed to save settings. Please try again.");
+		} finally {
+			setIsSaving(false);
+		}
 	};
 
 	return (
@@ -61,13 +60,6 @@ export default function SettingsPage() {
 					Manage your account preferences and security settings.
 				</p>
 			</div>
-
-			{success && (
-				<Alert>
-					<BadgeCheck className="h-4 w-4" />
-					<AlertDescription>{success}</AlertDescription>
-				</Alert>
-			)}
 
 			{/* General Settings */}
 			<Card>
@@ -265,8 +257,9 @@ export default function SettingsPage() {
 				<Button
 					onClick={handleSaveSettings}
 					disabled={isSaving}
-					className="bg-primary hover:bg-primary/90"
+					className="bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
 				>
+					{isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 					{isSaving ? "Saving..." : "Save Settings"}
 				</Button>
 			</div>

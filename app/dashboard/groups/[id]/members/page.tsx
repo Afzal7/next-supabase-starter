@@ -2,8 +2,11 @@
 
 import { MoreHorizontal, UserX } from "lucide-react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { Users } from "@/components/animate-ui/icons/users";
-
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +25,6 @@ import {
 	useRemoveMemberMutation,
 	useUpdateMemberMutation,
 } from "@/lib/rtk/api";
-import { InviteMemberModal } from "../_components/InviteMemberModal";
 
 export default function GroupMembersPage() {
 	const params = useParams();
@@ -32,13 +34,79 @@ export default function GroupMembersPage() {
 		data: membersResponse,
 		isLoading,
 		error,
+		refetch,
 	} = useGetMembersQuery({ groupId });
 	const [updateMember] = useUpdateMemberMutation();
 	const [removeMember] = useRemoveMemberMutation();
 
 	const members = membersResponse?.data || [];
 
-	if (isLoading || error) return null;
+	const handleUpdateRole = async (
+		userId: string,
+		role: string,
+		memberName?: string,
+	) => {
+		try {
+			await updateMember({
+				groupId,
+				userId,
+				body: { role },
+			}).unwrap();
+			toast.success(
+				`${memberName || "Member"}'s role has been updated to ${role}.`,
+			);
+		} catch (_error) {
+			toast.error("Failed to update role. Please try again.");
+		}
+	};
+
+	const handleRemoveMember = (userId: string, memberName?: string) => {
+		const memberDisplayName = memberName || "this member";
+		toast.error(`Remove ${memberDisplayName} from the group?`, {
+			action: {
+				label: "Remove",
+				onClick: async () => {
+					try {
+						await removeMember({ groupId, userId }).unwrap();
+						toast.success(
+							`${memberName || "Member"} has been removed from the group.`,
+						);
+					} catch (_error) {
+						toast.error("Failed to remove member. Please try again.");
+					}
+				},
+			},
+		});
+	};
+
+	if (isLoading) {
+		return (
+			<div className="space-y-6">
+				<div className="flex items-center justify-between">
+					<h3 className="text-lg font-semibold">
+						{groupConfig.entityName} Members
+					</h3>
+				</div>
+				<LoadingSkeleton type="list" count={3} className="grid gap-4" />
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="space-y-6">
+				<div className="flex items-center justify-between">
+					<h3 className="text-lg font-semibold">
+						{groupConfig.entityName} Members
+					</h3>
+				</div>
+				<ErrorState
+					message="Failed to load members. Please try again."
+					onRetry={() => refetch()}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">
@@ -46,13 +114,15 @@ export default function GroupMembersPage() {
 				<h3 className="text-lg font-semibold">
 					{groupConfig.entityName} Members
 				</h3>
-				<InviteMemberModal groupId={groupId} />
 			</div>
 
 			{members.length > 0 ? (
 				<div className="grid gap-4">
 					{members.map((member) => (
-						<Card key={member.id} className="hover:shadow-md transition-shadow">
+						<Card
+							key={member.id}
+							className="hover:shadow-md hover:scale-[1.01] transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
+						>
 							<CardContent className="p-4">
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-3">
@@ -94,11 +164,11 @@ export default function GroupMembersPage() {
 													<DropdownMenuItem
 														key={role}
 														onClick={() =>
-															updateMember({
-																groupId,
-																userId: member.user_id,
-																body: { role },
-															})
+															handleUpdateRole(
+																member.user_id,
+																role,
+																member.user?.name,
+															)
 														}
 														disabled={member.role === role}
 													>
@@ -108,15 +178,12 @@ export default function GroupMembersPage() {
 												))}
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
-													onClick={() => {
-														if (
-															confirm(
-																`Remove ${member.user?.name || member.user?.email} from the group?`,
-															)
-														) {
-															removeMember({ groupId, userId: member.user_id });
-														}
-													}}
+													onClick={() =>
+														handleRemoveMember(
+															member.user_id,
+															member.user?.name,
+														)
+													}
 													className="text-destructive"
 												>
 													<UserX className="h-4 w-4 mr-2" />
@@ -131,21 +198,11 @@ export default function GroupMembersPage() {
 					))}
 				</div>
 			) : (
-				<Card>
-					<CardContent className="p-12 text-center">
-						<Users
-							className="h-12 w-12 text-muted-foreground mx-auto mb-4"
-							animateOnHover
-						/>
-						<h3 className="text-lg font-semibold text-primary mb-2">
-							No members yet
-						</h3>
-						<p className="text-secondary mb-4">
-							Invite your first team member to get started.
-						</p>
-						<InviteMemberModal groupId={groupId} />
-					</CardContent>
-				</Card>
+				<EmptyState
+					icon={Users}
+					title="No members yet"
+					description="Invite your first team member to get started."
+				/>
 			)}
 		</div>
 	);

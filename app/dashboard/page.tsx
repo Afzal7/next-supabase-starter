@@ -1,14 +1,13 @@
 "use client";
 
-import { AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Plus } from "@/components/animate-ui/icons/plus";
 import { Users } from "@/components/animate-ui/icons/users";
 import { CreateGroupModal } from "@/components/groups/create-group-modal";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { groupConfig } from "@/config/groups";
 import { useGetGroupsQuery } from "@/lib/rtk/api";
 
@@ -37,22 +36,12 @@ export default function Dashboard() {
 							Manage your {groupConfig.entityNamePlural.toLowerCase()}
 						</p>
 					</div>
-					<Skeleton className="h-10 w-32" />
 				</div>
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{Array.from({ length: 6 }).map((_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: Fixed number of skeleton items, order never changes
-						<Card key={i} className="shadow-sm">
-							<CardHeader>
-								<Skeleton className="h-5 w-3/4" />
-								<Skeleton className="h-4 w-1/2" />
-							</CardHeader>
-							<CardContent>
-								<Skeleton className="h-4 w-1/4" />
-							</CardContent>
-						</Card>
-					))}
-				</div>
+				<LoadingSkeleton
+					type="list"
+					count={6}
+					className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+				/>
 			</div>
 		);
 	}
@@ -68,21 +57,10 @@ export default function Dashboard() {
 						</p>
 					</div>
 				</div>
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription className="flex items-center justify-between">
-						<span>Failed to load groups. Please try again.</span>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => refetch()}
-							className="ml-4"
-						>
-							<RefreshCw className="h-4 w-4 mr-2" />
-							Retry
-						</Button>
-					</AlertDescription>
-				</Alert>
+				<ErrorState
+					message="Failed to load groups. Please try again."
+					onRetry={() => refetch()}
+				/>
 			</div>
 		);
 	}
@@ -129,7 +107,7 @@ export default function Dashboard() {
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{groups.map((group) => (
 						<Link key={group.id} href={`/dashboard/groups/${group.id}`}>
-							<Card className="shadow-sm hover:shadow-md transition-all duration-normal ease-smooth cursor-pointer">
+							<Card className="shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-200 ease-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2">
 								<CardHeader>
 									<CardTitle className="text-lg text-primary">
 										{group.name}

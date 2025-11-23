@@ -68,14 +68,13 @@ export default function GroupLayout({ children }: GroupLayoutProps) {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold text-primary">{group.name}</h1>
-					<p className="text-secondary mt-1">
-						{group.description || "No description provided"}
-					</p>
+					<h1 className="text-2xl font-semibold text-primary capitalize">
+						{group.name}
+					</h1>
+					{group.description && (
+						<p className="text-secondary mt-1">{group.description}</p>
+					)}
 					<div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-						<span className="capitalize">
-							<Badge variant="secondary">{group.group_type}</Badge>
-						</span>
 						<span className="flex items-center gap-1">
 							<Calendar className="h-4 w-4" />
 							Created{" "}

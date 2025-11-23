@@ -11,7 +11,6 @@ import {
 	ErrorCode,
 	type Group,
 	type GroupService,
-	type GroupWithMembers,
 	type PaginatedResponse,
 	type PaginationOptions,
 	type UpdateGroupRequest,
