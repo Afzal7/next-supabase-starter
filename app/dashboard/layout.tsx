@@ -93,11 +93,7 @@ const DATA = {
 			url: "/dashboard",
 			icon: Bot,
 		},
-		{
-			title: "Invitations",
-			url: "/dashboard/invitations",
-			icon: Bell,
-		},
+
 		{
 			title: "Profile",
 			url: "/dashboard/profile",

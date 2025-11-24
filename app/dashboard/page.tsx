@@ -1,138 +1,136 @@
 "use client";
 
-import { Plus, Users } from "lucide-react";
-import Link from "next/link";
-import { CreateGroupModal } from "@/components/groups/create-group-modal";
 import { ErrorState } from "@/components/shared/error-state";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { groupConfig } from "@/config/groups";
-import { useGetGroupsQuery } from "@/lib/rtk/api";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useGetGroupsQuery, useGetUserInvitationsQuery } from "@/lib/rtk/api";
+import { CreateFirstTeamCard } from "./_components/CreateFirstTeamCard";
+import { CreatePostCard } from "./_components/CreatePostCard";
+import { ExploreFeaturesCard } from "./_components/ExploreFeaturesCard";
+import { GettingStartedActivityCard } from "./_components/GettingStartedActivityCard";
+import { PendingInvitationsCard } from "./_components/PendingInvitationsCard";
+import { QuickActionsCard } from "./_components/QuickActionsCard";
+import { RecentActivityCard } from "./_components/RecentActivityCard";
+import { YourTeamsCard } from "./_components/YourTeamsCard";
 
 export default function Dashboard() {
 	const {
 		data: groupsResponse,
-		isLoading,
-		error,
-		refetch,
+		isLoading: groupsLoading,
+		error: groupsError,
+		refetch: refetchGroups,
 	} = useGetGroupsQuery({
 		page: 1,
 		limit: 20,
 	});
 
+	const {
+		data: invitationsResponse,
+		isLoading: invitationsLoading,
+		error: invitationsError,
+		refetch: refetchInvitations,
+	} = useGetUserInvitationsQuery(undefined);
+
 	const groups = groupsResponse?.data || [];
+	const invitations = invitationsResponse?.invitations || [];
+	const hasPendingInvitations = invitations.length > 0;
+
+	const isLoading = groupsLoading || invitationsLoading;
+	const hasError = groupsError || invitationsError;
 
 	if (isLoading) {
 		return (
-			<div className="space-y-6">
-				<div className="flex items-center justify-between">
-					<div>
-						<h1 className="text-xl font-semibold text-primary">
-							Your {groupConfig.entityNamePlural}
-						</h1>
-						<p className="text-secondary">
-							Manage your {groupConfig.entityNamePlural.toLowerCase()}
-						</p>
-					</div>
+			<div className="space-y-8">
+				<div className="text-center space-y-2">
+					<h1 className="text-3xl font-bold text-primary">Welcome back!</h1>
+					<p className="text-lg text-secondary">
+						Here's what's happening with your workspace
+					</p>
 				</div>
-				<LoadingSkeleton
-					type="list"
-					count={6}
-					className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
-				/>
+				<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+					{["a", "b", "c", "d", "e", "f"].map((key) => (
+						<Card key={`skeleton-${key}`} className="shadow-sm">
+							<CardHeader className="pb-3">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-muted rounded-lg animate-pulse" />
+									<div className="space-y-2 flex-1">
+										<div className="h-4 bg-muted rounded animate-pulse" />
+										<div className="h-3 bg-muted rounded w-2/3 animate-pulse" />
+									</div>
+								</div>
+							</CardHeader>
+							<CardContent>
+								<div className="space-y-3">
+									<div className="h-3 bg-muted rounded animate-pulse" />
+									<div className="h-8 bg-muted rounded animate-pulse" />
+								</div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
 			</div>
 		);
 	}
 
-	if (error) {
+	if (hasError) {
 		return (
-			<div className="space-y-6">
-				<div className="flex items-center justify-between">
-					<div>
-						<h1 className="text-xl font-semibold text-primary">Your Groups</h1>
-						<p className="text-secondary">
-							Manage your organizations and teams
-						</p>
-					</div>
+			<div className="space-y-8">
+				<div className="text-center space-y-2">
+					<h1 className="text-3xl font-bold text-primary">Welcome back!</h1>
+					<p className="text-lg text-secondary">
+						Here's what's happening with your workspace
+					</p>
 				</div>
 				<ErrorState
-					message="Failed to load groups. Please try again."
-					onRetry={() => refetch()}
+					message="Failed to load dashboard. Please try again."
+					onRetry={() => {
+						refetchGroups();
+						refetchInvitations();
+					}}
 				/>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-6">
-			{/* Header */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-xl font-semibold text-primary">
-						Your {groupConfig.entityNamePlural}
-					</h1>
-					<p className="text-secondary">
-						Manage your {groupConfig.entityNamePlural.toLowerCase()}
-					</p>
-				</div>
+		<div className="space-y-8">
+			<div className="text-center space-y-2">
+				<h1 className="text-3xl font-bold text-primary">
+					Welcome to your workspace
+				</h1>
+				<p className="text-lg text-secondary">
+					Manage your teams, create content, and collaborate with others
+				</p>
 			</div>
 
-			{/* Groups Grid */}
-			{groups.length === 0 ? (
-				<Card className="shadow-sm">
-					<CardContent className="p-12 text-center space-y-4">
-						<div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto">
-							<Users className="h-8 w-8 text-primary" />
-						</div>
-						<div>
-							<h3 className="text-lg font-semibold text-primary mb-2">
-								No {groupConfig.entityNamePlural.toLowerCase()} yet
-							</h3>
-							<p className="text-secondary mb-6">
-								Create your first {groupConfig.entityName.toLowerCase()} to
-								start collaborating with your team.
-							</p>
-							<CreateGroupModal>
-								<Button className="bg-primary hover:bg-primary/90">
-									<Plus className="h-4 w-4 mr-2" />
-									Create Your First {groupConfig.entityName}
-								</Button>
-							</CreateGroupModal>
-						</div>
-					</CardContent>
-				</Card>
-			) : (
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{groups.map((group) => (
-						<Link key={group.id} href={`/dashboard/groups/${group.id}`}>
-							<Card className="shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-200 ease-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2">
-								<CardHeader>
-									<CardTitle className="text-lg text-primary">
-										<span className="capitalize">{group.name}</span>
-									</CardTitle>
-									<p className="text-sm text-secondary">
-										{group.description || "No description"}
-									</p>
-								</CardHeader>
-								<CardContent>
-									<div className="flex items-center justify-between text-sm text-tertiary">
-										<span className="capitalize">{group.group_type}</span>
-										<span className="text-xs">
-											Created{" "}
-											{group.created_at
-												? new Date(
-														group.created_at as string,
-													).toLocaleDateString()
-												: "Unknown"}
-										</span>
-									</div>
-								</CardContent>
-							</Card>
-						</Link>
-					))}
-				</div>
-			)}
+			<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+				{/* Priority 1: Pending Invitations */}
+				{hasPendingInvitations && (
+					<PendingInvitationsCard invitations={invitations} />
+				)}
+
+				{/* Priority 2: Team Overview */}
+				{groups.length > 0 && <YourTeamsCard groups={groups} />}
+
+				{/* Priority 3: Create Team */}
+				{groups.length === 0 && !hasPendingInvitations && (
+					<CreateFirstTeamCard />
+				)}
+
+				{/* Explore Features */}
+				<ExploreFeaturesCard />
+
+				{/* Create Post */}
+				<CreatePostCard />
+
+				{/* Recent Activity */}
+				<RecentActivityCard />
+
+				{/* Quick Actions */}
+				<QuickActionsCard />
+
+				{/* Getting Started/Activity */}
+				<GettingStartedActivityCard hasTeams={groups.length > 0} />
+			</div>
 		</div>
 	);
 }
