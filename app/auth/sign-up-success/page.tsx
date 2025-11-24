@@ -1,7 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState } from "react";
-import { Check } from "@/components/animate-ui/icons/check";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
@@ -38,7 +38,7 @@ export default function Page() {
 						{/* Success Icon */}
 						<div className="flex justify-center">
 							<div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center">
-								<Check size={32} className="text-success" animateOnHover />
+								<Check size={32} className="text-success" />
 							</div>
 						</div>
 

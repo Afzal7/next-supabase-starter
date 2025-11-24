@@ -1,10 +1,16 @@
 "use client";
 
-import { AlertTriangle, FileText, Loader2, Trash2, UserX } from "lucide-react";
+import {
+	AlertTriangle,
+	FileText,
+	Loader2,
+	Settings,
+	Trash2,
+	UserX,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Settings } from "@/components/animate-ui/icons/settings";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,20 +22,18 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { groupConfig } from "@/config/groups";
+import { usePermissions } from "@/lib/casl/hooks";
 import {
 	useDeleteGroupMutation,
 	useGetGroupQuery,
 	useUpdateGroupMutation,
 } from "@/lib/rtk/api";
-import { createClient } from "@/lib/supabase/client";
 
 export default function GroupSettingsPage() {
 	const params = useParams();
 	const router = useRouter();
 	const groupId = params.id as string;
-
-	const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
-	const [isUserLoading, setIsUserLoading] = useState(true);
+	const { canUpdateGroup, canDeleteGroup } = usePermissions();
 
 	const { data: group, isLoading, error, refetch } = useGetGroupQuery(groupId);
 	const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
@@ -40,43 +44,13 @@ export default function GroupSettingsPage() {
 	const [description, setDescription] = useState("");
 
 	useEffect(() => {
-		const getCurrentUser = async () => {
-			try {
-				const supabase = createClient();
-				const {
-					data: { user },
-					error,
-				} = await supabase.auth.getUser();
-
-				if (error || !user) {
-					toast.error("Failed to authenticate user");
-					router.push("/auth/login");
-					return;
-				}
-
-				setCurrentUser({ id: user.id });
-			} catch (_error) {
-				toast.error("Failed to load user information");
-				router.push("/auth/login");
-			} finally {
-				setIsUserLoading(false);
-			}
-		};
-
-		getCurrentUser();
-	}, [router]);
-
-	useEffect(() => {
 		if (group) {
 			setName(group.name);
 			setDescription(group.description || "");
 		}
 	}, [group]);
 
-	const isOwner = currentUser && group && group.owner_id === currentUser.id;
-	const isLoadingAll = isLoading || isUserLoading;
-
-	if (isLoadingAll) {
+	if (isLoading) {
 		return <LoadingSkeleton type="form" />;
 	}
 
@@ -93,7 +67,7 @@ export default function GroupSettingsPage() {
 		return <ErrorState message={`${groupConfig.entityName} not found.`} />;
 	}
 
-	if (!isOwner) {
+	if (!canUpdateGroup(groupId)) {
 		return (
 			<div className="space-y-6">
 				<Alert variant="destructive">
@@ -163,7 +137,7 @@ export default function GroupSettingsPage() {
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
-						<Settings className="h-5 w-5" animateOnHover />
+						<Settings className="h-5 w-5" />
 						General Settings
 					</CardTitle>
 				</CardHeader>
@@ -258,15 +232,21 @@ export default function GroupSettingsPage() {
 							Permanently delete this {groupConfig.entityName.toLowerCase()} and
 							all associated data. This action cannot be undone.
 						</p>
-						<Button
-							variant="destructive"
-							onClick={handleDeleteGroup}
-							disabled={isDeleting}
-						>
-							{isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-							<Trash2 className="h-4 w-4 mr-2" />
-							{isDeleting ? "Deleting..." : `Delete ${groupConfig.entityName}`}
-						</Button>
+						{canDeleteGroup(groupId) && (
+							<Button
+								variant="destructive"
+								onClick={handleDeleteGroup}
+								disabled={isDeleting}
+							>
+								{isDeleting && (
+									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+								)}
+								<Trash2 className="h-4 w-4 mr-2" />
+								{isDeleting
+									? "Deleting..."
+									: `Delete ${groupConfig.entityName}`}
+							</Button>
+						)}
 					</div>
 
 					<Separator />

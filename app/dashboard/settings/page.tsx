@@ -1,9 +1,9 @@
 "use client";
 
-import { Loader2, Palette, Shield } from "lucide-react";
+import { Bell, Loader2, Palette, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Bell } from "@/components/animate-ui/icons/bell";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -138,7 +138,7 @@ export default function SettingsPage() {
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
-						<Bell className="h-5 w-5" animateOnHover />
+						<Bell className="h-5 w-5" />
 						Notifications
 					</CardTitle>
 				</CardHeader>

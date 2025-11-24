@@ -1,8 +1,8 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Plus } from "@/components/animate-ui/icons/plus";
 import { FadeIn } from "@/components/animations/fade-in";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,7 +135,7 @@ export function CreateGroupModal({
 				<DialogTrigger asChild>
 					{children || (
 						<Button className="bg-primary hover:bg-primary/90">
-							<Plus className="h-4 w-4 mr-2" animateOnHover />
+							<Plus className="h-4 w-4 mr-2" />
 							Create {groupConfig.entityName}
 						</Button>
 					)}

@@ -1,8 +1,7 @@
 "use client";
 
+import { Plus, Users } from "lucide-react";
 import Link from "next/link";
-import { Plus } from "@/components/animate-ui/icons/plus";
-import { Users } from "@/components/animate-ui/icons/users";
 import { CreateGroupModal } from "@/components/groups/create-group-modal";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -84,7 +83,7 @@ export default function Dashboard() {
 				<Card className="shadow-sm">
 					<CardContent className="p-12 text-center space-y-4">
 						<div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto">
-							<Users className="h-8 w-8 text-primary" animateOnHover />
+							<Users className="h-8 w-8 text-primary" />
 						</div>
 						<div>
 							<h3 className="text-lg font-semibold text-primary mb-2">

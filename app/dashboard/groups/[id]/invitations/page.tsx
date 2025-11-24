@@ -17,6 +17,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/lib/casl/hooks";
 import {
 	useCancelInvitationMutation,
 	useGetInvitationsQuery,
@@ -26,6 +27,7 @@ import {
 export default function GroupInvitationsPage() {
 	const params = useParams();
 	const groupId = params.id as string;
+	const { canManageInvitations } = usePermissions();
 
 	const {
 		data: invitations,
@@ -127,45 +129,49 @@ export default function GroupInvitationsPage() {
 										>
 											{invitation.status}
 										</Badge>
-										{invitation.status === "pending" && (
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button variant="ghost" size="sm">
-														<MoreHorizontal className="h-4 w-4" />
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">
-													<DropdownMenuLabel>Actions</DropdownMenuLabel>
-													<DropdownMenuSeparator />
-													<DropdownMenuItem
-														onClick={() =>
-															handleResendInvitation(invitation.id)
-														}
-														disabled={isResending}
-													>
-														{isResending && (
-															<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-														)}
-														Resend Invitation
-													</DropdownMenuItem>
-													<DropdownMenuItem
-														onClick={() => {
-															if (confirm("Cancel this invitation?")) {
-																handleCancelInvitation(groupId, invitation.id);
+										{invitation.status === "pending" &&
+											canManageInvitations() && (
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button variant="ghost" size="sm">
+															<MoreHorizontal className="h-4 w-4" />
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="end">
+														<DropdownMenuLabel>Actions</DropdownMenuLabel>
+														<DropdownMenuSeparator />
+														<DropdownMenuItem
+															onClick={() =>
+																handleResendInvitation(invitation.id)
 															}
-														}}
-														className="text-destructive"
-														disabled={isCancelling}
-													>
-														{isCancelling && (
-															<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-														)}
-														<UserX className="h-4 w-4 mr-2" />
-														Cancel Invitation
-													</DropdownMenuItem>
-												</DropdownMenuContent>
-											</DropdownMenu>
-										)}
+															disabled={isResending}
+														>
+															{isResending && (
+																<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+															)}
+															Resend Invitation
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															onClick={() => {
+																if (confirm("Cancel this invitation?")) {
+																	handleCancelInvitation(
+																		groupId,
+																		invitation.id,
+																	);
+																}
+															}}
+															className="text-destructive"
+															disabled={isCancelling}
+														>
+															{isCancelling && (
+																<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+															)}
+															<UserX className="h-4 w-4 mr-2" />
+															Cancel Invitation
+														</DropdownMenuItem>
+													</DropdownMenuContent>
+												</DropdownMenu>
+											)}
 									</div>
 								</div>
 							</CardContent>

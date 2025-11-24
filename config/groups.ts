@@ -22,8 +22,8 @@ export type GroupConfig = {
 
 // Default configuration for generic group management
 export const groupConfig: GroupConfig = {
-	entityName: "Organization", // Display name in UI
-	entityNamePlural: "Organizations",
+	entityName: "Team", // Display name in UI
+	entityNamePlural: "Teams",
 	defaultGroupType: "organization", // Optional: for group_type column
 	supportedGroupTypes: ["organization"], // Optional: for validation
 	defaultRoles: ["owner", "admin", "member"],

@@ -9,6 +9,8 @@
 		"types:generate:local": "supabase gen types typescript --local > types/database.types.ts"
 	},
 	"dependencies": {
+		"@casl/ability": "^6.7.3",
+		"@casl/react": "^5.0.0",
 		"@floating-ui/react": "^0.27.16",
 		"@headlessui/react": "^2.2.9",
 		"@hookform/resolvers": "^5.2.2",

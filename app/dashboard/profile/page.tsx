@@ -1,9 +1,8 @@
 "use client";
 
-import { AlertCircle, Loader2, Mail } from "lucide-react";
+import { AlertCircle, Loader2, Mail, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { User } from "@/components/animate-ui/icons/user";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -140,7 +139,7 @@ export default function ProfilePage() {
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
-						<User className="h-5 w-5" animateOnHover />
+						<User className="h-5 w-5" />
 						Account Information
 					</CardTitle>
 				</CardHeader>

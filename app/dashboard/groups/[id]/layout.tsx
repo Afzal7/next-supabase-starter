@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Calendar } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groupConfig } from "@/config/groups";
 import { useGetGroupQuery } from "@/lib/rtk/api";
-import { InviteMemberModal } from "./_components/InviteMemberModal";
 
 interface GroupLayoutProps {
 	children: React.ReactNode;

@@ -2,9 +2,16 @@
 
 import {
 	AlertCircle,
+	BadgeCheck,
+	Bell,
+	Bot,
 	ChevronRight,
 	ChevronsUpDown,
+	LogOut,
+	Plus,
+	Settings,
 	SquareTerminal,
+	Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,14 +45,7 @@ import {
 	SidebarRail,
 	SidebarTrigger,
 } from "@/components/animate-ui/components/radix/sidebar";
-import { BadgeCheck } from "@/components/animate-ui/icons/badge-check";
-import { Bell } from "@/components/animate-ui/icons/bell";
-import { Bot } from "@/components/animate-ui/icons/bot";
-import type { IconProps } from "@/components/animate-ui/icons/icon";
-import { LogOut } from "@/components/animate-ui/icons/log-out";
-import { Plus } from "@/components/animate-ui/icons/plus";
-import { Settings } from "@/components/animate-ui/icons/settings";
-import { Users } from "@/components/animate-ui/icons/users";
+
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -65,14 +65,17 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { groupConfig } from "@/config/groups";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useGetGroupsQuery } from "@/lib/rtk/api";
+import { createAbilityFromMembership } from "@/lib/casl/abilities";
+import { AbilityProvider } from "@/lib/casl/components";
+import { usePermissions } from "@/lib/casl/hooks";
+import { useGetGroupsQuery, useGetMembersQuery } from "@/lib/rtk/api";
 import { createClient } from "@/lib/supabase/client";
 import type { Group } from "@/types";
 
 type NavItem = {
 	title: string;
 	url: string;
-	icon: React.ComponentType<IconProps<string>>;
+	icon: React.ComponentType<{ className?: string; size?: number }>;
 	isActive?: boolean;
 	items?: { title: string; url: string }[];
 };
@@ -108,6 +111,147 @@ const DATA = {
 	] as NavItem[],
 };
 
+// Separate component for sidebar content that can use CASL permissions
+function SidebarContentComponent({
+	activeGroup,
+	pathname,
+}: {
+	activeGroup: Group | null;
+	pathname: string;
+}) {
+	const { canManageInvitations, canUpdateGroup } = usePermissions();
+
+	return (
+		<SidebarContent>
+			<SidebarGroup>
+				<SidebarGroupLabel>General</SidebarGroupLabel>
+				<SidebarMenu>
+					{DATA.navMain
+						.filter((item) => item.title !== groupConfig.entityNamePlural) // Remove groups from here since we handle it separately
+						.map((item) =>
+							item.items ? (
+								<Collapsible
+									key={item.title}
+									asChild
+									defaultOpen={item.isActive}
+									className="group/collapsible"
+								>
+									<SidebarMenuItem>
+										<CollapsibleTrigger asChild>
+											<SidebarMenuButton
+												tooltip={item.title}
+												isActive={pathname === item.url}
+											>
+												{item.icon && React.createElement(item.icon, {})}
+												<span>{item.title}</span>
+												<ChevronRight className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
+											</SidebarMenuButton>
+										</CollapsibleTrigger>
+										<CollapsibleContent>
+											<SidebarMenuSub>
+												{item.items.map((subItem) => (
+													<SidebarMenuSubItem key={subItem.title}>
+														<SidebarMenuSubButton asChild>
+															<a href={subItem.url}>
+																<span>{subItem.title}</span>
+															</a>
+														</SidebarMenuSubButton>
+													</SidebarMenuSubItem>
+												))}
+											</SidebarMenuSub>
+										</CollapsibleContent>
+									</SidebarMenuItem>
+								</Collapsible>
+							) : (
+								<SidebarMenuItem key={item.title}>
+									<SidebarMenuButton
+										asChild
+										tooltip={item.title}
+										isActive={pathname === item.url}
+									>
+										<Link href={item.url}>
+											{item.icon && <item.icon />}
+											<span>{item.title}</span>
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							),
+						)}
+				</SidebarMenu>
+			</SidebarGroup>
+
+			{pathname.startsWith("/dashboard/groups/") && activeGroup && (
+				<SidebarGroup>
+					<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+					<SidebarMenu>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								asChild
+								tooltip="Overview"
+								isActive={pathname === `/dashboard/groups/${activeGroup.id}`}
+							>
+								<Link href={`/dashboard/groups/${activeGroup.id}`}>
+									<Settings />
+									<span>Overview</span>
+								</Link>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								asChild
+								tooltip="Members"
+								isActive={
+									pathname === `/dashboard/groups/${activeGroup.id}/members`
+								}
+							>
+								<Link href={`/dashboard/groups/${activeGroup.id}/members`}>
+									<Users />
+									<span>Members</span>
+								</Link>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						{canManageInvitations() && (
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									asChild
+									tooltip="Invitations"
+									isActive={
+										pathname ===
+										`/dashboard/groups/${activeGroup.id}/invitations`
+									}
+								>
+									<Link
+										href={`/dashboard/groups/${activeGroup.id}/invitations`}
+									>
+										<AlertCircle />
+										<span>Invitations</span>
+									</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						)}
+						{canUpdateGroup(activeGroup.id) && (
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									asChild
+									tooltip="Settings"
+									isActive={
+										pathname === `/dashboard/groups/${activeGroup.id}/settings`
+									}
+								>
+									<Link href={`/dashboard/groups/${activeGroup.id}/settings`}>
+										<Settings />
+										<span>Settings</span>
+									</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						)}
+					</SidebarMenu>
+				</SidebarGroup>
+			)}
+		</SidebarContent>
+	);
+}
+
 export default function DashboardLayout({
 	children,
 }: {
@@ -117,6 +261,7 @@ export default function DashboardLayout({
 	const router = useRouter();
 
 	const [user, setUser] = React.useState<{
+		id?: string;
 		name?: string;
 		email?: string;
 		avatar?: string;
@@ -127,9 +272,30 @@ export default function DashboardLayout({
 
 	const { data: groupsResponse, isLoading: groupsLoading } = useGetGroupsQuery({
 		page: 1,
-		limit: 20,
+		limit: 1,
 	});
 	const groups = groupsResponse?.data || [];
+
+	// Get current user's membership for the active group
+	const { data: membershipResponse } = useGetMembersQuery(
+		{ groupId: activeGroup?.id || "", page: 1, limit: 1 },
+		{ skip: !activeGroup?.id },
+	);
+	const currentUserMembership = membershipResponse?.data?.find(
+		(member) => member.user_id === user?.id,
+	);
+
+	// Create ability instance for the current user and group (after membership is declared)
+	const ability = React.useMemo(() => {
+		if (currentUserMembership && activeGroup && user?.id) {
+			return createAbilityFromMembership(
+				user.id,
+				currentUserMembership,
+				activeGroup,
+			);
+		}
+		return null;
+	}, [currentUserMembership, activeGroup, user?.id]);
 
 	React.useEffect(() => {
 		const getUser = async () => {
@@ -139,6 +305,7 @@ export default function DashboardLayout({
 			} = await supabase.auth.getUser();
 			if (authUser) {
 				setUser({
+					id: authUser.id,
 					name: authUser.user_metadata?.name || authUser.email?.split("@")[0],
 					email: authUser.email,
 					avatar: authUser.user_metadata?.avatar_url,
@@ -161,7 +328,7 @@ export default function DashboardLayout({
 	};
 
 	return (
-		<>
+		<AbilityProvider ability={ability || undefined}>
 			<SidebarProvider>
 				<Sidebar collapsible="icon">
 					<SidebarHeader>
@@ -172,26 +339,27 @@ export default function DashboardLayout({
 									<DropdownMenuTrigger asChild>
 										<SidebarMenuButton
 											size="lg"
-											className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+											className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground pointer-events-none"
 										>
 											<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-												<Bot className="size-4" animateOnHover />
+												<Bot className="size-4" />
 											</div>
 											<div className="grid flex-1 text-left text-sm leading-tight">
-												<span className="truncate font-semibold">
-													{activeGroup?.name ||
-														(groups.length === 0
+												<span className="truncate font-semibold capitalize">
+													{activeGroup?.name || "Personal"}
+													{/* (groups.length === 0
 															? `No ${groupConfig.entityNamePlural.toLowerCase()}`
-															: groupConfig.entityName)}
+															: groupConfig.entityName)} */}
 												</span>
 												<span className="truncate text-xs">
-													{activeGroup?.group_type ||
+													Workspace
+													{/* {activeGroup?.group_type ||
 														(groups.length === 0
 															? "Create one below"
-															: "Management")}
+															: "Management")} */}
 												</span>
 											</div>
-											<ChevronsUpDown className="ml-auto" />
+											{/* <ChevronsUpDown className="ml-auto" /> */}
 										</SidebarMenuButton>
 									</DropdownMenuTrigger>
 									<DropdownMenuContent
@@ -225,7 +393,7 @@ export default function DashboardLayout({
 													className="gap-2 p-2"
 												>
 													<div className="flex size-6 items-center justify-center rounded-sm border">
-														<Bot className="size-4 shrink-0" animateOnHover />
+														<Bot className="size-4 shrink-0" />
 													</div>
 													{group.name}
 													<DropdownMenuShortcut>
@@ -244,7 +412,7 @@ export default function DashboardLayout({
 											onClick={() => setShowCreateModal(true)}
 										>
 											<div className="flex size-6 items-center justify-center rounded-md border bg-background">
-												<Plus className="size-4" animateOnHover />
+												<Plus className="size-4" />
 											</div>
 											<div className="font-medium text-muted-foreground">
 												Create {groupConfig.entityName}
@@ -257,139 +425,10 @@ export default function DashboardLayout({
 						{/* Group Switcher */}
 					</SidebarHeader>
 
-					<SidebarContent>
-						{/* Workspace Section - Only show when on group pages */}
-						{pathname.startsWith("/dashboard/groups/") && activeGroup && (
-							<SidebarGroup>
-								<SidebarGroupLabel>Workspace</SidebarGroupLabel>
-								<SidebarMenu>
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											asChild
-											tooltip="Overview"
-											isActive={
-												pathname === `/dashboard/groups/${activeGroup.id}`
-											}
-										>
-											<Link href={`/dashboard/groups/${activeGroup.id}`}>
-												<Settings animateOnHover />
-												<span>Overview</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											asChild
-											tooltip="Members"
-											isActive={
-												pathname ===
-												`/dashboard/groups/${activeGroup.id}/members`
-											}
-										>
-											<Link
-												href={`/dashboard/groups/${activeGroup.id}/members`}
-											>
-												<Users animateOnHover />
-												<span>Members</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											asChild
-											tooltip="Invitations"
-											isActive={
-												pathname ===
-												`/dashboard/groups/${activeGroup.id}/invitations`
-											}
-										>
-											<Link
-												href={`/dashboard/groups/${activeGroup.id}/invitations`}
-											>
-												<AlertCircle />
-												<span>Invitations</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											asChild
-											tooltip="Settings"
-											isActive={
-												pathname ===
-												`/dashboard/groups/${activeGroup.id}/settings`
-											}
-										>
-											<Link
-												href={`/dashboard/groups/${activeGroup.id}/settings`}
-											>
-												<Settings animateOnHover />
-												<span>Settings</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								</SidebarMenu>
-							</SidebarGroup>
-						)}
-
-						{/* Platform Section */}
-						<SidebarGroup>
-							<SidebarGroupLabel>Platform</SidebarGroupLabel>
-							<SidebarMenu>
-								{DATA.navMain
-									.filter((item) => item.title !== groupConfig.entityNamePlural) // Remove groups from here since we handle it separately
-									.map((item) =>
-										item.items ? (
-											<Collapsible
-												key={item.title}
-												asChild
-												defaultOpen={item.isActive}
-												className="group/collapsible"
-											>
-												<SidebarMenuItem>
-													<CollapsibleTrigger asChild>
-														<SidebarMenuButton
-															tooltip={item.title}
-															isActive={pathname === item.url}
-														>
-															{item.icon && <item.icon animateOnHover />}
-															<span>{item.title}</span>
-															<ChevronRight className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
-														</SidebarMenuButton>
-													</CollapsibleTrigger>
-													<CollapsibleContent>
-														<SidebarMenuSub>
-															{item.items.map((subItem) => (
-																<SidebarMenuSubItem key={subItem.title}>
-																	<SidebarMenuSubButton asChild>
-																		<a href={subItem.url}>
-																			<span>{subItem.title}</span>
-																		</a>
-																	</SidebarMenuSubButton>
-																</SidebarMenuSubItem>
-															))}
-														</SidebarMenuSub>
-													</CollapsibleContent>
-												</SidebarMenuItem>
-											</Collapsible>
-										) : (
-											<SidebarMenuItem key={item.title}>
-												<SidebarMenuButton
-													asChild
-													tooltip={item.title}
-													isActive={pathname === item.url}
-												>
-													<Link href={item.url}>
-														{item.icon && <item.icon animateOnHover />}
-														<span>{item.title}</span>
-													</Link>
-												</SidebarMenuButton>
-											</SidebarMenuItem>
-										),
-									)}
-							</SidebarMenu>
-						</SidebarGroup>
-					</SidebarContent>
+					<SidebarContentComponent
+						activeGroup={activeGroup}
+						pathname={pathname}
+					/>
 					<SidebarFooter>
 						{/* Nav User */}
 						<SidebarMenu>
@@ -446,17 +485,17 @@ export default function DashboardLayout({
 										<DropdownMenuSeparator />
 										<DropdownMenuGroup>
 											<DropdownMenuItem>
-												<BadgeCheck animateOnHover />
+												<BadgeCheck />
 												Account
 											</DropdownMenuItem>
 											<DropdownMenuItem>
-												<Bell animateOnHover />
+												<Bell />
 												Notifications
 											</DropdownMenuItem>
 										</DropdownMenuGroup>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem onClick={handleLogout}>
-											<LogOut animateOnHover />
+											<LogOut />
 											Log out
 										</DropdownMenuItem>
 									</DropdownMenuContent>
@@ -592,6 +631,6 @@ export default function DashboardLayout({
 				/>
 			</SidebarProvider>
 			<Toaster />
-		</>
+		</AbilityProvider>
 	);
 }

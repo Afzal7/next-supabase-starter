@@ -1,9 +1,8 @@
 "use client";
 
-import { MoreHorizontal, UserX } from "lucide-react";
+import { MoreHorizontal, Users, UserX } from "lucide-react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { Users } from "@/components/animate-ui/icons/users";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -20,6 +19,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { groupConfig } from "@/config/groups";
+import { usePermissions } from "@/lib/casl/hooks";
 import {
 	useGetMembersQuery,
 	useRemoveMemberMutation,
@@ -29,6 +29,7 @@ import {
 export default function GroupMembersPage() {
 	const params = useParams();
 	const groupId = params.id as string;
+	const { canManageMembers, canRemoveMember } = usePermissions();
 
 	const {
 		data: membersResponse,
@@ -150,47 +151,56 @@ export default function GroupMembersPage() {
 										>
 											{member.role}
 										</Badge>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="sm">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuLabel>Actions</DropdownMenuLabel>
-												<DropdownMenuSeparator />
-												<DropdownMenuLabel>Change Role</DropdownMenuLabel>
-												{groupConfig.defaultRoles.map((role) => (
-													<DropdownMenuItem
-														key={role}
-														onClick={() =>
-															handleUpdateRole(
-																member.user_id,
-																role,
-																member.user?.name,
-															)
-														}
-														disabled={member.role === role}
-													>
-														Set as{" "}
-														{role.charAt(0).toUpperCase() + role.slice(1)}
-													</DropdownMenuItem>
-												))}
-												<DropdownMenuSeparator />
-												<DropdownMenuItem
-													onClick={() =>
-														handleRemoveMember(
-															member.user_id,
-															member.user?.name,
-														)
-													}
-													className="text-destructive"
-												>
-													<UserX className="h-4 w-4 mr-2" />
-													Remove Member
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										{(canManageMembers() ||
+											canRemoveMember(member.user_id)) && (
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button variant="ghost" size="sm">
+														<MoreHorizontal className="h-4 w-4" />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuLabel>Actions</DropdownMenuLabel>
+													<DropdownMenuSeparator />
+													{canManageMembers() && (
+														<>
+															<DropdownMenuLabel>Change Role</DropdownMenuLabel>
+															{groupConfig.defaultRoles.map((role) => (
+																<DropdownMenuItem
+																	key={role}
+																	onClick={() =>
+																		handleUpdateRole(
+																			member.user_id,
+																			role,
+																			member.user?.name,
+																		)
+																	}
+																	disabled={member.role === role}
+																>
+																	Set as{" "}
+																	{role.charAt(0).toUpperCase() + role.slice(1)}
+																</DropdownMenuItem>
+															))}
+															<DropdownMenuSeparator />
+														</>
+													)}
+													{canRemoveMember(member.user_id) && (
+														<DropdownMenuItem
+															onClick={() =>
+																handleRemoveMember(
+																	member.user_id,
+																	member.user?.name,
+																)
+															}
+															className="text-destructive"
+														>
+															<UserX className="h-4 w-4 mr-2" />
+															Remove Member
+														</DropdownMenuItem>
+													)}
+												</DropdownMenuContent>
+											</DropdownMenu>
+										)}
 									</div>
 								</div>
 							</CardContent>
